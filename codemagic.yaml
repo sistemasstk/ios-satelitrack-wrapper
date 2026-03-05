@@ -18,6 +18,20 @@ workflows:
         distribution_type: app_store
         bundle_identifier: novadev.Satelital
     scripts:
+      - name: Generate iOS project if missing
+        script: |
+          if [ ! -d ios/Runner.xcodeproj ]; then
+            flutter create --platforms=ios --org novadev --project-name ios_satelitrack_wrapper .
+          fi
+      - name: Force bundle identifier
+        script: |
+          sed -i.bak 's/PRODUCT_BUNDLE_IDENTIFIER = [^;]*;/PRODUCT_BUNDLE_IDENTIFIER = novadev.Satelital;/g' ios/Runner.xcodeproj/project.pbxproj
+          rm -f ios/Runner.xcodeproj/project.pbxproj.bak
+      - name: Inject GoogleService-Info.plist (optional)
+        script: |
+          if [ -n "${FIREBASE_IOS_PLIST_BASE64:-}" ]; then
+            echo "$FIREBASE_IOS_PLIST_BASE64" | base64 --decode > ios/Runner/GoogleService-Info.plist
+          fi
       - name: Install dependencies
         script: |
           flutter pub get
@@ -49,6 +63,20 @@ workflows:
         distribution_type: ad_hoc
         bundle_identifier: novadev.Satelital
     scripts:
+      - name: Generate iOS project if missing
+        script: |
+          if [ ! -d ios/Runner.xcodeproj ]; then
+            flutter create --platforms=ios --org novadev --project-name ios_satelitrack_wrapper .
+          fi
+      - name: Force bundle identifier
+        script: |
+          sed -i.bak 's/PRODUCT_BUNDLE_IDENTIFIER = [^;]*;/PRODUCT_BUNDLE_IDENTIFIER = novadev.Satelital;/g' ios/Runner.xcodeproj/project.pbxproj
+          rm -f ios/Runner.xcodeproj/project.pbxproj.bak
+      - name: Inject GoogleService-Info.plist (optional)
+        script: |
+          if [ -n "${FIREBASE_IOS_PLIST_BASE64:-}" ]; then
+            echo "$FIREBASE_IOS_PLIST_BASE64" | base64 --decode > ios/Runner/GoogleService-Info.plist
+          fi
       - name: Install dependencies
         script: |
           flutter pub get

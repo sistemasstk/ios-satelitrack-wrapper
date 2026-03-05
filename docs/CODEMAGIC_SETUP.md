@@ -8,6 +8,7 @@
 ## 2. Variables requeridas
 
 - `APP_BASE_URL`: `https://app2025.satelitrack.com.co/app2025/`.
+- `FIREBASE_IOS_PLIST_BASE64` (opcional pero recomendado): contenido base64 de `GoogleService-Info.plist`.
 
 ## 3. iOS signing
 
@@ -19,6 +20,7 @@
 
 ## 4. Firebase/APNs en runner
 
-- Agregar `GoogleService-Info.plist` al proyecto iOS Flutter (`ios/Runner/`).
+- Si no tienes `ios/` en el repo, el workflow lo genera automáticamente en build.
+- Para Firebase en CI, usa `FIREBASE_IOS_PLIST_BASE64`; el workflow crea `ios/Runner/GoogleService-Info.plist`.
 - Configurar APNs key en Firebase para compatibilidad FCM.
 - Configurar APNs direct credentials en backend vía variables de entorno (no en Codemagic).
