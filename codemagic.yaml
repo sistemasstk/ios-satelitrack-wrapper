@@ -12,11 +12,11 @@ workflows:
       flutter: stable
       xcode: latest
       vars:
-        APP_BASE_URL: "$APP_BASE_URL"
+        APP_BASE_URL: "https://app2025.satelitrack.com.co/app2025/"
         APP_VERSION: "2025"
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.satelitrack.app2025
+        bundle_identifier: novadev.Satelital
     scripts:
       - name: Install dependencies
         script: |
@@ -43,11 +43,11 @@ workflows:
       flutter: stable
       xcode: latest
       vars:
-        APP_BASE_URL: "$APP_BASE_URL"
+        APP_BASE_URL: "https://app2025.satelitrack.com.co/app2025/"
         APP_VERSION: "2025"
       ios_signing:
         distribution_type: ad_hoc
-        bundle_identifier: com.satelitrack.app2025
+        bundle_identifier: novadev.Satelital
     scripts:
       - name: Install dependencies
         script: |

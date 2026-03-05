@@ -4,7 +4,7 @@
 
 - Cuenta Apple Developer activa.
 - Proyecto Firebase creado.
-- App iOS registrada en Firebase con bundle id `com.satelitrack.app2025`.
+- App iOS registrada en Firebase con bundle id `novadev.Satelital`.
 
 ## 2) APNs en Apple Developer
 
@@ -30,7 +30,7 @@ La app Flutter solicita permisos y obtiene:
 - token APNs (`provider=apns`) cuando está disponible
 - token FCM (`provider=fcm`) como respaldo
 
-Se abre `app2025/index.php` con:
+Se abre `https://app2025.satelitrack.com.co/app2025/` con:
 - `tokenId`
 - `tokenProvider`
 - `platform=ios`

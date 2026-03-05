@@ -1,6 +1,6 @@
 # Satelitrack iOS Wrapper (Flutter)
 
-Wrapper Flutter para iOS que abre `app2025/index.php` en `WebView` y envía token móvil por querystring para mantener compatibilidad con el backend actual.
+Wrapper Flutter para iOS que abre `https://app2025.satelitrack.com.co/app2025/` en `WebView` y envía token móvil por querystring para mantener compatibilidad con el backend actual.
 
 ## Flujo de arranque
 
@@ -8,11 +8,11 @@ Wrapper Flutter para iOS que abre `app2025/index.php` en `WebView` y envía toke
 2. Obtiene token APNs y token FCM (si existe).
 3. Prioriza token en orden: `apns` > `fcm` > `vacio`.
 4. Abre:
-   - `https://TU-DOMINIO.com/app2025/index.php?tokenId=<TOKEN>&version=2025&tokenProvider=<apns|fcm|none>&platform=ios`
+   - `https://app2025.satelitrack.com.co/app2025/?tokenId=<TOKEN>&version=2025&tokenProvider=<apns|fcm|none>&platform=ios`
 
 ## Variables de compilación
 
-- `APP_BASE_URL` (default: `https://TU-DOMINIO.com/app2025/index.php`)
+- `APP_BASE_URL` (default: `https://app2025.satelitrack.com.co/app2025/`)
 - `APP_VERSION` (default: `2025`)
 - `TOKEN_PARAM_NAME` (default: `tokenId`)
 
@@ -20,7 +20,7 @@ Ejemplo:
 
 ```bash
 flutter run \
-  --dart-define=APP_BASE_URL=https://tu-dominio.com/app2025/index.php \
+  --dart-define=APP_BASE_URL=https://app2025.satelitrack.com.co/app2025/ \
   --dart-define=APP_VERSION=2025
 ```
 

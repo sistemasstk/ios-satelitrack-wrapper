@@ -7,12 +7,12 @@
 
 ## 2. Variables requeridas
 
-- `APP_BASE_URL`: URL final de `app2025/index.php`.
+- `APP_BASE_URL`: `https://app2025.satelitrack.com.co/app2025/`.
 
 ## 3. iOS signing
 
 - Subir certificado de distribución iOS.
-- Subir provisioning profile para `com.satelitrack.app2025`.
+- Subir provisioning profile para `novadev.Satelital`.
 - Asignar a workflows:
   - `ios_signed_main` -> App Store
   - `ios_validate_develop` -> Ad Hoc

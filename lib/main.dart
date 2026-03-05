@@ -43,7 +43,7 @@ class WrapperBootstrapPage extends StatefulWidget {
 }
 
 class _WrapperBootstrapPageState extends State<WrapperBootstrapPage> {
-  static const String _defaultUrl = 'https://TU-DOMINIO.com/app2025/index.php';
+  static const String _defaultUrl = 'https://app2025.satelitrack.com.co/app2025/';
   static const String _defaultVersion = '2025';
 
   late final WebViewController _controller;
