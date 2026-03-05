@@ -1,0 +1,62 @@
+workflows:
+  ios_signed_main:
+    name: iOS Signed - main
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+    environment:
+      flutter: stable
+      xcode: latest
+      vars:
+        APP_BASE_URL: "$APP_BASE_URL"
+        APP_VERSION: "2025"
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.satelitrack.app2025
+    scripts:
+      - name: Install dependencies
+        script: |
+          flutter pub get
+      - name: Build iOS signed IPA
+        script: |
+          flutter build ipa --release \
+            --dart-define=APP_BASE_URL=$APP_BASE_URL \
+            --dart-define=APP_VERSION=$APP_VERSION
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+  ios_validate_develop:
+    name: iOS Validate - develop
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: develop
+          include: true
+          source: true
+    environment:
+      flutter: stable
+      xcode: latest
+      vars:
+        APP_BASE_URL: "$APP_BASE_URL"
+        APP_VERSION: "2025"
+      ios_signing:
+        distribution_type: ad_hoc
+        bundle_identifier: com.satelitrack.app2025
+    scripts:
+      - name: Install dependencies
+        script: |
+          flutter pub get
+      - name: Build iOS IPA validation
+        script: |
+          flutter build ipa --release \
+            --dart-define=APP_BASE_URL=$APP_BASE_URL \
+            --dart-define=APP_VERSION=$APP_VERSION
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
