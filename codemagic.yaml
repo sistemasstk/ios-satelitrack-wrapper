@@ -31,8 +31,13 @@ workflows:
           rm -f ios/Runner.xcodeproj/project.pbxproj.bak
       - name: Inject GoogleService-Info.plist (optional)
         script: |
-          if [ -n "${FIREBASE_IOS_PLIST_BASE64:-}" ]; then
-            echo "$FIREBASE_IOS_PLIST_BASE64" | base64 --decode > ios/Runner/GoogleService-Info.plist
+          if [ -n "${FIREBASE_IOS_PLIST_BASE64:-}" ] && [ "${FIREBASE_IOS_PLIST_BASE64}" != "null" ]; then
+            if echo "$FIREBASE_IOS_PLIST_BASE64" | tr -d '\n\r' | base64 --decode > ios/Runner/GoogleService-Info.plist; then
+              echo "GoogleService-Info.plist injected from FIREBASE_IOS_PLIST_BASE64"
+            else
+              echo "WARN: FIREBASE_IOS_PLIST_BASE64 is not valid base64; skipping plist injection"
+              rm -f ios/Runner/GoogleService-Info.plist
+            fi
           fi
       - name: Install dependencies
         script: |
@@ -78,8 +83,13 @@ workflows:
           rm -f ios/Runner.xcodeproj/project.pbxproj.bak
       - name: Inject GoogleService-Info.plist (optional)
         script: |
-          if [ -n "${FIREBASE_IOS_PLIST_BASE64:-}" ]; then
-            echo "$FIREBASE_IOS_PLIST_BASE64" | base64 --decode > ios/Runner/GoogleService-Info.plist
+          if [ -n "${FIREBASE_IOS_PLIST_BASE64:-}" ] && [ "${FIREBASE_IOS_PLIST_BASE64}" != "null" ]; then
+            if echo "$FIREBASE_IOS_PLIST_BASE64" | tr -d '\n\r' | base64 --decode > ios/Runner/GoogleService-Info.plist; then
+              echo "GoogleService-Info.plist injected from FIREBASE_IOS_PLIST_BASE64"
+            else
+              echo "WARN: FIREBASE_IOS_PLIST_BASE64 is not valid base64; skipping plist injection"
+              rm -f ios/Runner/GoogleService-Info.plist
+            fi
           fi
       - name: Install dependencies
         script: |
