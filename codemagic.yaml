@@ -50,6 +50,14 @@ workflows:
           flutter build ipa --release \
             --dart-define=APP_BASE_URL=$APP_BASE_URL \
             --dart-define=APP_VERSION=$APP_VERSION
+      - name: Verify IPA output
+        script: |
+          echo "== List build/ios/ipa =="
+          ls -lah build/ios/ipa || true
+          echo "== Find IPA files =="
+          find build -type f -name "*.ipa" -print || true
+          echo "== Find xcode logs =="
+          find /tmp/xcodebuild_logs -type f -maxdepth 2 -print || true
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
@@ -105,6 +113,14 @@ workflows:
           flutter build ipa --release \
             --dart-define=APP_BASE_URL=$APP_BASE_URL \
             --dart-define=APP_VERSION=$APP_VERSION
+      - name: Verify IPA output
+        script: |
+          echo "== List build/ios/ipa =="
+          ls -lah build/ios/ipa || true
+          echo "== Find IPA files =="
+          find build -type f -name "*.ipa" -print || true
+          echo "== Find xcode logs =="
+          find /tmp/xcodebuild_logs -type f -maxdepth 2 -print || true
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
