@@ -43,11 +43,13 @@ class WrapperBootstrapPage extends StatefulWidget {
 }
 
 class _WrapperBootstrapPageState extends State<WrapperBootstrapPage> {
-  static const String _defaultUrl = 'https://app2025.satelitrack.com.co/app2025/';
+  static const String _defaultUrl = 'https://app.satelitrack.com.co/';
   static const String _defaultVersion = '2025';
 
   late final WebViewController _controller;
   String _status = 'Preparando aplicación...';
+  String? _targetUrl;
+  String? _webError;
   bool _loaded = false;
 
   @override
@@ -58,6 +60,11 @@ class _WrapperBootstrapPageState extends State<WrapperBootstrapPage> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onWebResourceError: (error) {
+            if (mounted) {
+              setState(() {
+                _webError = error.description;
+              });
+            }
             if (kDebugMode) {
               debugPrint('WebView error: ${error.description}');
             }
@@ -79,6 +86,7 @@ class _WrapperBootstrapPageState extends State<WrapperBootstrapPage> {
     if (mounted) {
       setState(() {
         _status = 'Redirigiendo...';
+        _targetUrl = targetUrl;
         _loaded = true;
       });
     }
@@ -166,6 +174,38 @@ class _WrapperBootstrapPageState extends State<WrapperBootstrapPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loaded && _webError != null) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.wifi_off, size: 42, color: Colors.redAccent),
+                const SizedBox(height: 12),
+                const Text('No se pudo abrir la página.'),
+                const SizedBox(height: 8),
+                Text(_webError!, textAlign: TextAlign.center),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    final url = _targetUrl;
+                    if (url != null) {
+                      setState(() => _webError = null);
+                      _controller.loadRequest(Uri.parse(url));
+                    }
+                  },
+                  child: const Text('Reintentar'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     if (!_loaded) {
       return Scaffold(
         backgroundColor: Colors.white,

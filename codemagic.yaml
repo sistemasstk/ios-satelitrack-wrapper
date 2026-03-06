@@ -14,7 +14,7 @@ workflows:
       flutter: stable
       xcode: latest
       vars:
-        APP_BASE_URL: "https://app2025.satelitrack.com.co/app2025/"
+        APP_BASE_URL: "https://app.satelitrack.com.co/"
         APP_VERSION: "2025"
         APP_STORE_VERSION: "1.1.0"
         APPLE_TEAM_ID: "9JJHM44432"
@@ -55,6 +55,13 @@ workflows:
       - name: Install dependencies
         script: |
           flutter pub get
+      - name: Apply custom app icon (optional)
+        script: |
+          if [ -f assets/icon.png ]; then
+            flutter pub run flutter_launcher_icons
+          else
+            echo "No assets/icon.png found, using default icon."
+          fi
       - name: Build iOS signed IPA
         script: |
           flutter build ipa --release \
@@ -173,7 +180,7 @@ workflows:
       flutter: stable
       xcode: latest
       vars:
-        APP_BASE_URL: "https://app2025.satelitrack.com.co/app2025/"
+        APP_BASE_URL: "https://app.satelitrack.com.co/"
         APP_VERSION: "2025"
         APP_STORE_VERSION: "1.1.0"
         APPLE_TEAM_ID: "9JJHM44432"
@@ -214,6 +221,13 @@ workflows:
       - name: Install dependencies
         script: |
           flutter pub get
+      - name: Apply custom app icon (optional)
+        script: |
+          if [ -f assets/icon.png ]; then
+            flutter pub run flutter_launcher_icons
+          else
+            echo "No assets/icon.png found, using default icon."
+          fi
       - name: Build iOS IPA validation
         script: |
           flutter build ipa --release \
