@@ -16,7 +16,7 @@ workflows:
       vars:
         APP_BASE_URL: "https://app.satelitrack.com.co/"
         APP_VERSION: "2025"
-        APP_STORE_VERSION: "1.1.0"
+        APP_STORE_VERSION: "1.2.0"
         APPLE_TEAM_ID: "9JJHM44432"
       ios_signing:
         distribution_type: app_store
@@ -58,6 +58,17 @@ workflows:
       - name: Apply custom app icon (optional)
         script: |
           if [ -f assets/icon.png ]; then
+            # Ensure iOS icon source is square 1024x1024 before generation.
+            WIDTH="$(sips -g pixelWidth assets/icon.png | awk '/pixelWidth/{print $2}')"
+            HEIGHT="$(sips -g pixelHeight assets/icon.png | awk '/pixelHeight/{print $2}')"
+            if [ "$WIDTH" != "$HEIGHT" ]; then
+              MIN_SIDE="$WIDTH"
+              if [ "$HEIGHT" -lt "$WIDTH" ]; then MIN_SIDE="$HEIGHT"; fi
+              sips -c "$MIN_SIDE" "$MIN_SIDE" assets/icon.png --out /tmp/icon-square.png >/dev/null
+              sips -z 1024 1024 /tmp/icon-square.png --out assets/icon.png >/dev/null
+            else
+              sips -z 1024 1024 assets/icon.png --out assets/icon.png >/dev/null
+            fi
             flutter pub run flutter_launcher_icons
           else
             echo "No assets/icon.png found, using default icon."
@@ -182,7 +193,7 @@ workflows:
       vars:
         APP_BASE_URL: "https://app.satelitrack.com.co/"
         APP_VERSION: "2025"
-        APP_STORE_VERSION: "1.1.0"
+        APP_STORE_VERSION: "1.2.0"
         APPLE_TEAM_ID: "9JJHM44432"
       ios_signing:
         distribution_type: ad_hoc
@@ -224,6 +235,17 @@ workflows:
       - name: Apply custom app icon (optional)
         script: |
           if [ -f assets/icon.png ]; then
+            # Ensure iOS icon source is square 1024x1024 before generation.
+            WIDTH="$(sips -g pixelWidth assets/icon.png | awk '/pixelWidth/{print $2}')"
+            HEIGHT="$(sips -g pixelHeight assets/icon.png | awk '/pixelHeight/{print $2}')"
+            if [ "$WIDTH" != "$HEIGHT" ]; then
+              MIN_SIDE="$WIDTH"
+              if [ "$HEIGHT" -lt "$WIDTH" ]; then MIN_SIDE="$HEIGHT"; fi
+              sips -c "$MIN_SIDE" "$MIN_SIDE" assets/icon.png --out /tmp/icon-square.png >/dev/null
+              sips -z 1024 1024 /tmp/icon-square.png --out assets/icon.png >/dev/null
+            else
+              sips -z 1024 1024 assets/icon.png --out assets/icon.png >/dev/null
+            fi
             flutter pub run flutter_launcher_icons
           else
             echo "No assets/icon.png found, using default icon."
