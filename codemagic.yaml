@@ -64,15 +64,30 @@ workflows:
           if ! find build -type f -name "*.ipa" | grep -q .; then
             ARCHIVE_PATH="$(find build -type d -name "Runner.xcarchive" | head -n 1)"
             if [ -n "$ARCHIVE_PATH" ]; then
-              PROFILE_PATH="$(grep -R -l "9JJHM44432.novadev.Satelital" ~/Library/MobileDevice/Provisioning\ Profiles 2>/dev/null | head -n 1)"
+              PROFILE_PATH="$(find ~/Library/MobileDevice/Provisioning\ Profiles -type f -name "*.mobileprovision" | head -n 1)"
               if [ -z "$PROFILE_PATH" ]; then
                 echo "ERROR: Provisioning profile for novadev.Satelital not found in runner."
                 ls -lah ~/Library/MobileDevice/Provisioning\ Profiles || true
                 exit 70
               fi
-              PROFILE_UUID="$(grep -A1 "<key>UUID</key>" "$PROFILE_PATH" | tail -n1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')"
+              security cms -D -i "$PROFILE_PATH" > /tmp/profile.plist
+              PROFILE_APP_ID="$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /tmp/profile.plist 2>/dev/null || true)"
+              PROFILE_UUID="$(/usr/libexec/PlistBuddy -c "Print :UUID" /tmp/profile.plist 2>/dev/null || true)"
+              PROFILE_NAME="$(/usr/libexec/PlistBuddy -c "Print :Name" /tmp/profile.plist 2>/dev/null || true)"
+              echo "Using profile path: $PROFILE_PATH"
+              echo "Using profile app id: $PROFILE_APP_ID"
+              echo "Using profile UUID: $PROFILE_UUID"
+              echo "Using profile Name: $PROFILE_NAME"
+              if [[ "$PROFILE_APP_ID" != "9JJHM44432.novadev.Satelital" ]]; then
+                echo "ERROR: Profile does not match expected app id 9JJHM44432.novadev.Satelital"
+                exit 70
+              fi
               if [ -z "$PROFILE_UUID" ]; then
                 echo "ERROR: Could not parse UUID from provisioning profile: $PROFILE_PATH"
+                exit 70
+              fi
+              if [ -z "$PROFILE_NAME" ]; then
+                echo "ERROR: Could not parse Name from provisioning profile: $PROFILE_PATH"
                 exit 70
               fi
               cat > /tmp/export_options.plist <<EOF
@@ -89,7 +104,7 @@ workflows:
               <key>provisioningProfiles</key>
               <dict>
                 <key>novadev.Satelital</key>
-                <string>${PROFILE_UUID}</string>
+                <string>${PROFILE_NAME}</string>
               </dict>
               <key>destination</key>
               <string>export</string>
@@ -193,15 +208,30 @@ workflows:
           if ! find build -type f -name "*.ipa" | grep -q .; then
             ARCHIVE_PATH="$(find build -type d -name "Runner.xcarchive" | head -n 1)"
             if [ -n "$ARCHIVE_PATH" ]; then
-              PROFILE_PATH="$(grep -R -l "9JJHM44432.novadev.Satelital" ~/Library/MobileDevice/Provisioning\ Profiles 2>/dev/null | head -n 1)"
+              PROFILE_PATH="$(find ~/Library/MobileDevice/Provisioning\ Profiles -type f -name "*.mobileprovision" | head -n 1)"
               if [ -z "$PROFILE_PATH" ]; then
                 echo "ERROR: Provisioning profile for novadev.Satelital not found in runner."
                 ls -lah ~/Library/MobileDevice/Provisioning\ Profiles || true
                 exit 70
               fi
-              PROFILE_UUID="$(grep -A1 "<key>UUID</key>" "$PROFILE_PATH" | tail -n1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')"
+              security cms -D -i "$PROFILE_PATH" > /tmp/profile.plist
+              PROFILE_APP_ID="$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /tmp/profile.plist 2>/dev/null || true)"
+              PROFILE_UUID="$(/usr/libexec/PlistBuddy -c "Print :UUID" /tmp/profile.plist 2>/dev/null || true)"
+              PROFILE_NAME="$(/usr/libexec/PlistBuddy -c "Print :Name" /tmp/profile.plist 2>/dev/null || true)"
+              echo "Using profile path: $PROFILE_PATH"
+              echo "Using profile app id: $PROFILE_APP_ID"
+              echo "Using profile UUID: $PROFILE_UUID"
+              echo "Using profile Name: $PROFILE_NAME"
+              if [[ "$PROFILE_APP_ID" != "9JJHM44432.novadev.Satelital" ]]; then
+                echo "ERROR: Profile does not match expected app id 9JJHM44432.novadev.Satelital"
+                exit 70
+              fi
               if [ -z "$PROFILE_UUID" ]; then
                 echo "ERROR: Could not parse UUID from provisioning profile: $PROFILE_PATH"
+                exit 70
+              fi
+              if [ -z "$PROFILE_NAME" ]; then
+                echo "ERROR: Could not parse Name from provisioning profile: $PROFILE_PATH"
                 exit 70
               fi
               cat > /tmp/export_options.plist <<EOF
@@ -218,7 +248,7 @@ workflows:
               <key>provisioningProfiles</key>
               <dict>
                 <key>novadev.Satelital</key>
-                <string>${PROFILE_UUID}</string>
+                <string>${PROFILE_NAME}</string>
               </dict>
               <key>destination</key>
               <string>export</string>
