@@ -16,6 +16,7 @@ workflows:
       vars:
         APP_BASE_URL: "https://app2025.satelitrack.com.co/app2025/"
         APP_VERSION: "2025"
+        APP_STORE_VERSION: "1.1.0"
         APPLE_TEAM_ID: "9JJHM44432"
       ios_signing:
         distribution_type: app_store
@@ -57,6 +58,8 @@ workflows:
       - name: Build iOS signed IPA
         script: |
           flutter build ipa --release \
+            --build-name=$APP_STORE_VERSION \
+            --build-number=$CM_BUILD_ID \
             --dart-define=APP_BASE_URL=$APP_BASE_URL \
             --dart-define=APP_VERSION=$APP_VERSION
       - name: Export IPA from archive if missing
@@ -133,7 +136,6 @@ workflows:
       - name: Collect artifacts
         script: |
           mkdir -p artifacts_out
-          find /Users/builder/clone -type f -name "*.ipa" -exec cp -f {} artifacts_out/ \; || true
           find /Users/builder/clone -type d -name "*.xcarchive" -exec cp -R {} artifacts_out/ \; || true
           find /tmp/xcodebuild_logs -type f -maxdepth 2 -exec cp -f {} artifacts_out/ \; || true
           echo "== artifacts_out =="
@@ -173,6 +175,7 @@ workflows:
       vars:
         APP_BASE_URL: "https://app2025.satelitrack.com.co/app2025/"
         APP_VERSION: "2025"
+        APP_STORE_VERSION: "1.1.0"
         APPLE_TEAM_ID: "9JJHM44432"
       ios_signing:
         distribution_type: ad_hoc
@@ -214,6 +217,8 @@ workflows:
       - name: Build iOS IPA validation
         script: |
           flutter build ipa --release \
+            --build-name=$APP_STORE_VERSION \
+            --build-number=$CM_BUILD_ID \
             --dart-define=APP_BASE_URL=$APP_BASE_URL \
             --dart-define=APP_VERSION=$APP_VERSION
       - name: Export IPA from archive if missing
@@ -290,7 +295,6 @@ workflows:
       - name: Collect artifacts
         script: |
           mkdir -p artifacts_out
-          find /Users/builder/clone -type f -name "*.ipa" -exec cp -f {} artifacts_out/ \; || true
           find /Users/builder/clone -type d -name "*.xcarchive" -exec cp -R {} artifacts_out/ \; || true
           find /tmp/xcodebuild_logs -type f -maxdepth 2 -exec cp -f {} artifacts_out/ \; || true
           echo "== artifacts_out =="
