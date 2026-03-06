@@ -58,8 +58,17 @@ workflows:
           find build -type f -name "*.ipa" -print || true
           echo "== Find xcode logs =="
           find /tmp/xcodebuild_logs -type f -maxdepth 2 -print || true
+      - name: Collect artifacts
+        script: |
+          mkdir -p artifacts_out
+          find /Users/builder/clone -type f -name "*.ipa" -exec cp -f {} artifacts_out/ \; || true
+          find /Users/builder/clone -type d -name "*.xcarchive" -exec cp -R {} artifacts_out/ \; || true
+          find /tmp/xcodebuild_logs -type f -maxdepth 2 -exec cp -f {} artifacts_out/ \; || true
+          echo "== artifacts_out =="
+          ls -lah artifacts_out || true
     artifacts:
       - build/ios/ipa/*.ipa
+      - artifacts_out/*
       - /tmp/xcodebuild_logs/*.log
 
   ios_validate_develop:
@@ -121,6 +130,15 @@ workflows:
           find build -type f -name "*.ipa" -print || true
           echo "== Find xcode logs =="
           find /tmp/xcodebuild_logs -type f -maxdepth 2 -print || true
+      - name: Collect artifacts
+        script: |
+          mkdir -p artifacts_out
+          find /Users/builder/clone -type f -name "*.ipa" -exec cp -f {} artifacts_out/ \; || true
+          find /Users/builder/clone -type d -name "*.xcarchive" -exec cp -R {} artifacts_out/ \; || true
+          find /tmp/xcodebuild_logs -type f -maxdepth 2 -exec cp -f {} artifacts_out/ \; || true
+          echo "== artifacts_out =="
+          ls -lah artifacts_out || true
     artifacts:
       - build/ios/ipa/*.ipa
+      - artifacts_out/*
       - /tmp/xcodebuild_logs/*.log
