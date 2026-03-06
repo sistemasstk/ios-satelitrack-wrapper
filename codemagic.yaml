@@ -64,17 +64,33 @@ workflows:
           if ! find build -type f -name "*.ipa" | grep -q .; then
             ARCHIVE_PATH="$(find build -type d -name "Runner.xcarchive" | head -n 1)"
             if [ -n "$ARCHIVE_PATH" ]; then
+              PROFILE_PATH="$(grep -R -l "9JJHM44432.novadev.Satelital" ~/Library/MobileDevice/Provisioning\ Profiles 2>/dev/null | head -n 1)"
+              if [ -z "$PROFILE_PATH" ]; then
+                echo "ERROR: Provisioning profile for novadev.Satelital not found in runner."
+                ls -lah ~/Library/MobileDevice/Provisioning\ Profiles || true
+                exit 70
+              fi
+              PROFILE_UUID="$(grep -A1 "<key>UUID</key>" "$PROFILE_PATH" | tail -n1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')"
+              if [ -z "$PROFILE_UUID" ]; then
+                echo "ERROR: Could not parse UUID from provisioning profile: $PROFILE_PATH"
+                exit 70
+              fi
               cat > /tmp/export_options.plist <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
             <dict>
               <key>method</key>
-              <string>app-store</string>
+              <string>app-store-connect</string>
               <key>signingStyle</key>
-              <string>automatic</string>
+              <string>manual</string>
               <key>teamID</key>
               <string>${APPLE_TEAM_ID}</string>
+              <key>provisioningProfiles</key>
+              <dict>
+                <key>novadev.Satelital</key>
+                <string>${PROFILE_UUID}</string>
+              </dict>
               <key>destination</key>
               <string>export</string>
               <key>stripSwiftSymbols</key>
@@ -177,6 +193,17 @@ workflows:
           if ! find build -type f -name "*.ipa" | grep -q .; then
             ARCHIVE_PATH="$(find build -type d -name "Runner.xcarchive" | head -n 1)"
             if [ -n "$ARCHIVE_PATH" ]; then
+              PROFILE_PATH="$(grep -R -l "9JJHM44432.novadev.Satelital" ~/Library/MobileDevice/Provisioning\ Profiles 2>/dev/null | head -n 1)"
+              if [ -z "$PROFILE_PATH" ]; then
+                echo "ERROR: Provisioning profile for novadev.Satelital not found in runner."
+                ls -lah ~/Library/MobileDevice/Provisioning\ Profiles || true
+                exit 70
+              fi
+              PROFILE_UUID="$(grep -A1 "<key>UUID</key>" "$PROFILE_PATH" | tail -n1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')"
+              if [ -z "$PROFILE_UUID" ]; then
+                echo "ERROR: Could not parse UUID from provisioning profile: $PROFILE_PATH"
+                exit 70
+              fi
               cat > /tmp/export_options.plist <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -185,9 +212,14 @@ workflows:
               <key>method</key>
               <string>ad-hoc</string>
               <key>signingStyle</key>
-              <string>automatic</string>
+              <string>manual</string>
               <key>teamID</key>
               <string>${APPLE_TEAM_ID}</string>
+              <key>provisioningProfiles</key>
+              <dict>
+                <key>novadev.Satelital</key>
+                <string>${PROFILE_UUID}</string>
+              </dict>
               <key>destination</key>
               <string>export</string>
               <key>stripSwiftSymbols</key>
