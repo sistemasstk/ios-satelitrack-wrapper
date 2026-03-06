@@ -39,6 +39,9 @@ workflows:
               rm -f ios/Runner/GoogleService-Info.plist
             fi
           fi
+      - name: Apply provisioning profiles
+        script: |
+          xcode-project use-profiles
       - name: Install dependencies
         script: |
           flutter pub get
@@ -91,6 +94,9 @@ workflows:
               rm -f ios/Runner/GoogleService-Info.plist
             fi
           fi
+      - name: Apply provisioning profiles
+        script: |
+          xcode-project use-profiles
       - name: Install dependencies
         script: |
           flutter pub get
