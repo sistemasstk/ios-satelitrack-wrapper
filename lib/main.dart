@@ -44,15 +44,12 @@ class WrapperBootstrapPage extends StatefulWidget {
 
 class _WrapperBootstrapPageState extends State<WrapperBootstrapPage> {
   static const String _defaultUrl = 'https://app.satelitrack.com.co/';
-  static const String _fallbackUrl = 'https://app2025.satelitrack.com.co/app2025/index.php';
   static const String _defaultVersion = '2025';
 
   late final WebViewController _controller;
   String _status = 'Preparando aplicación...';
   String? _targetUrl;
   String? _webError;
-  TokenResult? _lastTokenResult;
-  bool _fallbackTried = false;
   bool _loaded = false;
 
   @override
@@ -63,22 +60,6 @@ class _WrapperBootstrapPageState extends State<WrapperBootstrapPage> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onWebResourceError: (error) {
-            if (!_fallbackTried && _lastTokenResult != null) {
-              _fallbackTried = true;
-              final fallbackTargetUrl = _buildAppUrl(
-                token: _lastTokenResult!.token,
-                provider: _lastTokenResult!.provider,
-                baseUrlOverride: _fallbackUrl,
-              );
-              if (mounted) {
-                setState(() {
-                  _status = 'Intentando ruta alterna...';
-                  _targetUrl = fallbackTargetUrl;
-                });
-              }
-              _controller.loadRequest(Uri.parse(fallbackTargetUrl));
-              return;
-            }
             if (mounted) {
               setState(() {
                 _webError = error.description;
@@ -97,7 +78,6 @@ class _WrapperBootstrapPageState extends State<WrapperBootstrapPage> {
 
   Future<void> _bootstrap() async {
     final tokenResult = await _resolveToken();
-    _lastTokenResult = tokenResult;
     final targetUrl = _buildAppUrl(
       token: tokenResult.token,
       provider: tokenResult.provider,

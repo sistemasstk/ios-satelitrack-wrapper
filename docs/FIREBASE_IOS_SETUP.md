@@ -30,7 +30,7 @@ La app Flutter solicita permisos y obtiene:
 - token APNs (`provider=apns`) cuando está disponible
 - token FCM (`provider=fcm`) como respaldo
 
-Se abre `https://app2025.satelitrack.com.co/app2025/` con:
+Se abre `https://app.satelitrack.com.co/` con:
 - `tokenId`
 - `tokenProvider`
 - `platform=ios`

@@ -7,7 +7,7 @@
 
 ## 2. Variables requeridas
 
-- `APP_BASE_URL`: `https://app2025.satelitrack.com.co/app2025/`.
+- `APP_BASE_URL`: `https://app.satelitrack.com.co/`.
 - `FIREBASE_IOS_PLIST_BASE64` (opcional pero recomendado): contenido base64 de `GoogleService-Info.plist`.
 
 ## 3. iOS signing
