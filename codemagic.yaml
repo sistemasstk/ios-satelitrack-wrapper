@@ -27,6 +27,21 @@ workflows:
           if [ ! -d ios/Runner.xcodeproj ]; then
             flutter create --platforms=ios --org novadev --project-name ios_satelitrack_wrapper .
           fi
+      - name: Allow app.satelitrack.com.co over ATS
+        script: |
+          INFO_PLIST="ios/Runner/Info.plist"
+          if [ -f "$INFO_PLIST" ]; then
+            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" "$INFO_PLIST" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoadsInWebContent bool true" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSAllowsArbitraryLoadsInWebContent true" "$INFO_PLIST"
+            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains dict" "$INFO_PLIST" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co dict" "$INFO_PLIST" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSIncludesSubdomains bool true" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSIncludesSubdomains true" "$INFO_PLIST"
+            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSTemporaryExceptionAllowsInsecureHTTPLoads bool true" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSTemporaryExceptionAllowsInsecureHTTPLoads true" "$INFO_PLIST"
+            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSTemporaryExceptionMinimumTLSVersion string TLSv1.0" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSTemporaryExceptionMinimumTLSVersion TLSv1.0" "$INFO_PLIST"
+            /usr/libexec/PlistBuddy -c "Print :NSAppTransportSecurity" "$INFO_PLIST"
+          else
+            echo "WARN: Info.plist not found to set ATS exceptions"
+          fi
       - name: Force bundle identifier
         script: |
           sed -i.bak 's/PRODUCT_BUNDLE_IDENTIFIER = [^;]*;/PRODUCT_BUNDLE_IDENTIFIER = novadev.Satelital;/g' ios/Runner.xcodeproj/project.pbxproj
@@ -203,6 +218,21 @@ workflows:
         script: |
           if [ ! -d ios/Runner.xcodeproj ]; then
             flutter create --platforms=ios --org novadev --project-name ios_satelitrack_wrapper .
+          fi
+      - name: Allow app.satelitrack.com.co over ATS
+        script: |
+          INFO_PLIST="ios/Runner/Info.plist"
+          if [ -f "$INFO_PLIST" ]; then
+            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" "$INFO_PLIST" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoadsInWebContent bool true" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSAllowsArbitraryLoadsInWebContent true" "$INFO_PLIST"
+            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains dict" "$INFO_PLIST" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co dict" "$INFO_PLIST" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSIncludesSubdomains bool true" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSIncludesSubdomains true" "$INFO_PLIST"
+            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSTemporaryExceptionAllowsInsecureHTTPLoads bool true" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSTemporaryExceptionAllowsInsecureHTTPLoads true" "$INFO_PLIST"
+            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSTemporaryExceptionMinimumTLSVersion string TLSv1.0" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSTemporaryExceptionMinimumTLSVersion TLSv1.0" "$INFO_PLIST"
+            /usr/libexec/PlistBuddy -c "Print :NSAppTransportSecurity" "$INFO_PLIST"
+          else
+            echo "WARN: Info.plist not found to set ATS exceptions"
           fi
       - name: Force bundle identifier
         script: |

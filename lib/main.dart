@@ -51,15 +51,24 @@ class _WrapperBootstrapPageState extends State<WrapperBootstrapPage> {
   String? _targetUrl;
   String? _webError;
   bool _loaded = false;
+  Timer? _timeout;
 
   @override
   void initState() {
     super.initState();
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(Colors.white)
       ..setNavigationDelegate(
         NavigationDelegate(
+          onPageFinished: (_) {
+            _timeout?.cancel();
+            if (mounted) {
+              setState(() => _loaded = true);
+            }
+          },
           onWebResourceError: (error) {
+            _timeout?.cancel();
             if (mounted) {
               setState(() {
                 _webError = error.description;
@@ -87,9 +96,16 @@ class _WrapperBootstrapPageState extends State<WrapperBootstrapPage> {
       setState(() {
         _status = 'Redirigiendo...';
         _targetUrl = targetUrl;
-        _loaded = true;
       });
     }
+
+    _timeout = Timer(const Duration(seconds: 12), () {
+      if (mounted && !_loaded && _webError == null) {
+        setState(() {
+          _webError = 'No se pudo cargar la página (timeout).';
+        });
+      }
+    });
 
     await _controller.loadRequest(Uri.parse(targetUrl));
   }
@@ -179,7 +195,7 @@ class _WrapperBootstrapPageState extends State<WrapperBootstrapPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loaded && _webError != null) {
+    if (_webError != null) {
       return Scaffold(
         backgroundColor: Colors.white,
         body: Padding(
@@ -228,6 +244,12 @@ class _WrapperBootstrapPageState extends State<WrapperBootstrapPage> {
     }
 
     return Scaffold(body: SafeArea(child: WebViewWidget(controller: _controller)));
+  }
+
+  @override
+  void dispose() {
+    _timeout?.cancel();
+    super.dispose();
   }
 }
 
