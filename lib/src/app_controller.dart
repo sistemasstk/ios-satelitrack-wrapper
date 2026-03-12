@@ -483,14 +483,19 @@ class AppController extends ChangeNotifier {
       return;
     }
 
-    _tokenRefreshSubscription = _notificationService.tokenRefreshStream().listen(
-      (TokenResult tokenResult) {
-        unawaited(_syncNotificationToken(initialToken: tokenResult));
-      },
-      onError: (_) {
-        // Ignore stream errors; periodic sync still runs on login/bootstrap.
-      },
-    );
+    try {
+      _tokenRefreshSubscription = _notificationService.tokenRefreshStream().listen(
+        (TokenResult tokenResult) {
+          unawaited(_syncNotificationToken(initialToken: tokenResult));
+        },
+        onError: (_) {
+          // Ignore stream errors; periodic sync still runs on login/bootstrap.
+        },
+      );
+    } catch (_) {
+      // Firebase may be unavailable (e.g. plist missing). Keep app usable.
+      _tokenRefreshSubscription = null;
+    }
   }
 
   Future<void> _syncNotificationToken({TokenResult? initialToken}) async {
