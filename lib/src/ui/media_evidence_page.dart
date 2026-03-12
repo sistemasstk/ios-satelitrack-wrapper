@@ -7,6 +7,11 @@ import '../app_controller.dart';
 import '../config/app_config.dart';
 import '../models/domain_models.dart';
 
+enum _ReportType {
+  evidence,
+  alarms,
+}
+
 class MediaEvidencePage extends StatefulWidget {
   const MediaEvidencePage({super.key, required this.controller});
 
@@ -21,12 +26,10 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
   bool _loadingMedia = false;
   List<VehicleRef> _vehicles = const <VehicleRef>[];
   List<MediaEvidence> _items = const <MediaEvidence>[];
+  List<AlarmHistoryItem> _alarmItems = const <AlarmHistoryItem>[];
   int? _selectedVehicleId;
-  DateTime _from = DateTime(
-    DateTime.now().year,
-    DateTime.now().month,
-    DateTime.now().day,
-  ).subtract(const Duration(days: 7));
+  _ReportType _reportType = _ReportType.evidence;
+  DateTime _from = DateTime.now().subtract(const Duration(hours: 24));
   DateTime _to = DateTime.now();
   String? _error;
 
@@ -108,17 +111,30 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
       _loadingMedia = true;
       _error = null;
       _items = const <MediaEvidence>[];
+      _alarmItems = const <AlarmHistoryItem>[];
     });
     try {
-      final List<MediaEvidence> items = await widget.controller.loadMediaEvidence(
-        idMovil: idMovil,
-        from: _from,
-        to: _to,
-      );
-      if (!mounted) {
-        return;
+      if (_reportType == _ReportType.evidence) {
+        final List<MediaEvidence> items = await widget.controller.loadMediaEvidence(
+          idMovil: idMovil,
+          from: _from,
+          to: _to,
+        );
+        if (!mounted) {
+          return;
+        }
+        setState(() => _items = items);
+      } else {
+        final List<AlarmHistoryItem> items = await widget.controller.loadAlarmHistory(
+          idMovil: idMovil,
+          from: _from,
+          to: _to,
+        );
+        if (!mounted) {
+          return;
+        }
+        setState(() => _alarmItems = items);
       }
-      setState(() => _items = items);
     } catch (ex) {
       if (!mounted) {
         return;
@@ -189,6 +205,36 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   children: <Widget>[
+                    DropdownButtonFormField<_ReportType>(
+                      value: _reportType,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: 'Tipo de informe',
+                      ),
+                      items: const <DropdownMenuItem<_ReportType>>[
+                        DropdownMenuItem<_ReportType>(
+                          value: _ReportType.evidence,
+                          child: Text('Evidencias (foto/video)'),
+                        ),
+                        DropdownMenuItem<_ReportType>(
+                          value: _ReportType.alarms,
+                          child: Text('Alarmas'),
+                        ),
+                      ],
+                      onChanged: _loadingMedia
+                          ? null
+                          : (_ReportType? value) {
+                              if (value == null) {
+                                return;
+                              }
+                              setState(() {
+                                _reportType = value;
+                                _items = const <MediaEvidence>[];
+                                _alarmItems = const <AlarmHistoryItem>[];
+                              });
+                            },
+                    ),
+                    const SizedBox(height: 8),
                     DropdownButtonFormField<int>(
                       value: _selectedVehicleId,
                       decoration: const InputDecoration(
@@ -263,9 +309,48 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
       );
     }
 
-    if (_items.isEmpty) {
+    if (_reportType == _ReportType.evidence && _items.isEmpty) {
       return const Center(
         child: Text('Sin resultados. Ajusta filtros y consulta.'),
+      );
+    }
+
+    if (_reportType == _ReportType.alarms && _alarmItems.isEmpty) {
+      return const Center(
+        child: Text('Sin resultados. Ajusta filtros y consulta.'),
+      );
+    }
+
+    if (_reportType == _ReportType.alarms) {
+      return ListView.builder(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        itemCount: _alarmItems.length,
+        itemBuilder: (BuildContext context, int index) {
+          final AlarmHistoryItem item = _alarmItems[index];
+          return Card(
+            margin: const EdgeInsets.only(bottom: 10),
+            child: ListTile(
+              leading: const Icon(Icons.warning_amber_rounded),
+              title: Text(item.event),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(item.gpsDate),
+                  Text(item.position, maxLines: 2, overflow: TextOverflow.ellipsis),
+                ],
+              ),
+              trailing: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: <Widget>[
+                  Text('Ign: ${item.ignition}'),
+                  Text(item.speed),
+                ],
+              ),
+            ),
+          );
+        },
       );
     }
 

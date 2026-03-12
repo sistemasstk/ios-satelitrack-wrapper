@@ -320,6 +320,29 @@ class BackendClient {
     return media;
   }
 
+  Future<ActionResult> registerNotificationToken({
+    required String tokenId,
+    required String tokenProvider,
+    required String tokenPlatform,
+  }) async {
+    final String normalizedToken = tokenId.trim().isEmpty ? 'vacio' : tokenId.trim();
+
+    final Map<String, dynamic> result = await _postFunctionMap(
+      idfn: 18,
+      payload: <String, dynamic>{
+        'token_id': normalizedToken,
+        'version': _appVersionNumber(),
+        'token_provider': tokenProvider,
+        'token_platform': tokenPlatform,
+      },
+    );
+
+    return ActionResult(
+      ok: asString(result['cod1']) == '1000',
+      message: asString(result['mensaje1'], fallback: 'Respuesta sin mensaje.'),
+    );
+  }
+
   Future<MobileModuleAccess> fetchModuleAccess({int? targetClientId}) async {
     final Map<String, dynamic> envelope = await _postJsonApiEnvelope(
       path: 'includes/mobile_app_admin_api.php',
@@ -642,6 +665,10 @@ String _formatDateTime(DateTime value) {
   final String minute = value.minute.toString().padLeft(2, '0');
   final String second = value.second.toString().padLeft(2, '0');
   return '$year-$month-$day $hour:$minute:$second';
+}
+
+int _appVersionNumber() {
+  return int.tryParse(AppConfig.appVersion) ?? 0;
 }
 
 String _toBackendPolygon(List<GeoPoint> points) {

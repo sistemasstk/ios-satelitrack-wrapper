@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import 'models/domain_models.dart';
@@ -52,6 +54,7 @@ class AppController extends ChangeNotifier {
       } catch (_) {
         // Keep dashboard available even if module permissions cannot be loaded.
       }
+      unawaited(_syncNotificationToken());
     } catch (_) {
       await _clearLocalSession();
     }
@@ -110,6 +113,7 @@ class AppController extends ChangeNotifier {
 
       session = newSession;
       await _sessionStore.save(newSession);
+      unawaited(_syncNotificationToken(initialToken: tokenResult));
       try {
         await refreshDashboard(silent: true);
         try {
@@ -452,6 +456,68 @@ class AppController extends ChangeNotifier {
 
   String _extractCurrentCookie() {
     return _backendClient.sessionCookie;
+  }
+
+  Future<void> _syncNotificationToken({TokenResult? initialToken}) async {
+    if (session == null) {
+      return;
+    }
+
+    TokenResult? tokenResult = initialToken;
+    for (int attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) {
+        await Future<void>.delayed(Duration(milliseconds: 800 * attempt));
+      }
+
+      if (tokenResult == null ||
+          tokenResult.token.trim().isEmpty ||
+          tokenResult.token == 'vacio') {
+        tokenResult = await _notificationService.resolveToken();
+      }
+
+      final String token = tokenResult.token.trim();
+      if (token.isEmpty || token == 'vacio') {
+        continue;
+      }
+
+      try {
+        final ActionResult result = await _backendClient.registerNotificationToken(
+          tokenId: token,
+          tokenProvider: tokenResult.provider,
+          tokenPlatform: tokenResult.platform,
+        );
+        if (!result.ok) {
+          continue;
+        }
+
+        final UserSession? current = session;
+        if (current == null) {
+          return;
+        }
+        if (current.tokenId == token &&
+            current.tokenProvider == tokenResult.provider &&
+            current.tokenPlatform == tokenResult.platform) {
+          return;
+        }
+
+        final UserSession updatedSession = UserSession(
+          sessionCookie: current.sessionCookie,
+          userType: current.userType,
+          username: current.username,
+          tokenId: token,
+          tokenProvider: tokenResult.provider,
+          tokenPlatform: tokenResult.platform,
+          createdAtIso: current.createdAtIso,
+        );
+        session = updatedSession;
+        await _sessionStore.save(updatedSession);
+        notifyListeners();
+      } catch (_) {
+        // Ignore sync errors; login and dashboard remain usable.
+      }
+
+      return;
+    }
   }
 
   Future<void> _clearLocalSession() async {
