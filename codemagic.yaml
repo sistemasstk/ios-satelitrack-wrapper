@@ -140,9 +140,14 @@ workflows:
           fi
       - name: Build iOS signed IPA
         script: |
+          SAFE_BUILD_NUMBER="${BUILD_NUMBER:-${PROJECT_BUILD_NUMBER:-1}}"
+          SAFE_BUILD_NUMBER="$(echo "$SAFE_BUILD_NUMBER" | tr -cd '0-9')"
+          SAFE_BUILD_NUMBER="${SAFE_BUILD_NUMBER:0:18}"
+          if [ -z "$SAFE_BUILD_NUMBER" ]; then SAFE_BUILD_NUMBER="1"; fi
+          echo "Using iOS build-number: $SAFE_BUILD_NUMBER"
           flutter build ipa --release \
             --build-name=$APP_STORE_VERSION \
-            --build-number=$CM_BUILD_ID \
+            --build-number=$SAFE_BUILD_NUMBER \
             --dart-define=APP_BASE_URL=$APP_BASE_URL \
             --dart-define=APP_VERSION=$APP_VERSION
       - name: Export IPA from archive if missing
@@ -382,9 +387,14 @@ workflows:
           fi
       - name: Build iOS IPA validation
         script: |
+          SAFE_BUILD_NUMBER="${BUILD_NUMBER:-${PROJECT_BUILD_NUMBER:-1}}"
+          SAFE_BUILD_NUMBER="$(echo "$SAFE_BUILD_NUMBER" | tr -cd '0-9')"
+          SAFE_BUILD_NUMBER="${SAFE_BUILD_NUMBER:0:18}"
+          if [ -z "$SAFE_BUILD_NUMBER" ]; then SAFE_BUILD_NUMBER="1"; fi
+          echo "Using iOS build-number: $SAFE_BUILD_NUMBER"
           flutter build ipa --release \
             --build-name=$APP_STORE_VERSION \
-            --build-number=$CM_BUILD_ID \
+            --build-number=$SAFE_BUILD_NUMBER \
             --dart-define=APP_BASE_URL=$APP_BASE_URL \
             --dart-define=APP_VERSION=$APP_VERSION
       - name: Export IPA from archive if missing
