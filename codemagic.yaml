@@ -33,6 +33,13 @@ workflows:
           ENTITLEMENTS="ios/Runner/Runner.entitlements"
           PBXPROJ="ios/Runner.xcodeproj/project.pbxproj"
 
+          mkdir -p ios/Runner
+          if [ ! -d "ios/Runner.xcodeproj" ]; then
+            echo "ERROR: ios/Runner.xcodeproj no existe despues de bootstrap."
+            ls -lah ios || true
+            exit 1
+          fi
+
           cat > "$ENTITLEMENTS" <<'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -47,11 +54,29 @@ workflows:
           if [ -f "$INFO_PLIST" ]; then
             /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" "$INFO_PLIST" 2>/dev/null || true
             /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string remote-notification" "$INFO_PLIST" 2>/dev/null || true
+          else
+            echo "WARN: Info.plist no encontrado en $INFO_PLIST"
           fi
 
           if [ -f "$PBXPROJ" ] && ! grep -q "Runner/Runner.entitlements" "$PBXPROJ"; then
-            perl -0pi -e 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Automatic;\\n\\t\\t\\t\\tCODE_SIGN_ENTITLEMENTS = Runner\\/Runner.entitlements;/g' "$PBXPROJ"
+            python3 - "$PBXPROJ" <<'PY'
+          import pathlib
+          import sys
+
+          path = pathlib.Path(sys.argv[1])
+          content = path.read_text()
+          needle = "CODE_SIGN_STYLE = Automatic;"
+          replacement = "CODE_SIGN_STYLE = Automatic;\n\t\t\t\tCODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;"
+
+          if "Runner/Runner.entitlements" not in content and needle in content:
+              content = content.replace(needle, replacement)
+              path.write_text(content)
+          PY
+          elif [ ! -f "$PBXPROJ" ]; then
+            echo "WARN: project.pbxproj no encontrado en $PBXPROJ"
           fi
+
+          echo "Push capabilities configuradas"
       - name: Allow app.satelitrack.com.co over ATS
         script: |
           INFO_PLIST="ios/Runner/Info.plist"
@@ -250,6 +275,13 @@ workflows:
           ENTITLEMENTS="ios/Runner/Runner.entitlements"
           PBXPROJ="ios/Runner.xcodeproj/project.pbxproj"
 
+          mkdir -p ios/Runner
+          if [ ! -d "ios/Runner.xcodeproj" ]; then
+            echo "ERROR: ios/Runner.xcodeproj no existe despues de bootstrap."
+            ls -lah ios || true
+            exit 1
+          fi
+
           cat > "$ENTITLEMENTS" <<'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -264,11 +296,29 @@ workflows:
           if [ -f "$INFO_PLIST" ]; then
             /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" "$INFO_PLIST" 2>/dev/null || true
             /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string remote-notification" "$INFO_PLIST" 2>/dev/null || true
+          else
+            echo "WARN: Info.plist no encontrado en $INFO_PLIST"
           fi
 
           if [ -f "$PBXPROJ" ] && ! grep -q "Runner/Runner.entitlements" "$PBXPROJ"; then
-            perl -0pi -e 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Automatic;\\n\\t\\t\\t\\tCODE_SIGN_ENTITLEMENTS = Runner\\/Runner.entitlements;/g' "$PBXPROJ"
+            python3 - "$PBXPROJ" <<'PY'
+          import pathlib
+          import sys
+
+          path = pathlib.Path(sys.argv[1])
+          content = path.read_text()
+          needle = "CODE_SIGN_STYLE = Automatic;"
+          replacement = "CODE_SIGN_STYLE = Automatic;\n\t\t\t\tCODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;"
+
+          if "Runner/Runner.entitlements" not in content and needle in content:
+              content = content.replace(needle, replacement)
+              path.write_text(content)
+          PY
+          elif [ ! -f "$PBXPROJ" ]; then
+            echo "WARN: project.pbxproj no encontrado en $PBXPROJ"
           fi
+
+          echo "Push capabilities configuradas"
       - name: Allow app.satelitrack.com.co over ATS
         script: |
           INFO_PLIST="ios/Runner/Info.plist"
