@@ -64,6 +64,49 @@ class UserSession {
   }
 }
 
+class MobileModuleAccess {
+  const MobileModuleAccess({
+    required this.clientId,
+    required this.canManageModules,
+    required this.tableReady,
+    required this.modules,
+  });
+
+  final int clientId;
+  final bool canManageModules;
+  final bool tableReady;
+  final Map<String, bool> modules;
+
+  bool isEnabled(String key, {bool fallback = false}) {
+    return modules[key] ?? fallback;
+  }
+
+  factory MobileModuleAccess.fromBackend(Map<String, dynamic> row) {
+    final dynamic rawModules = row['modules'];
+    final Map<String, bool> parsed = <String, bool>{};
+
+    if (rawModules is Map<String, dynamic>) {
+      for (final MapEntry<String, dynamic> entry in rawModules.entries) {
+        parsed[entry.key] = asBool(entry.value);
+      }
+    } else if (rawModules is Map) {
+      for (final MapEntry<dynamic, dynamic> entry in rawModules.entries) {
+        final String key = asString(entry.key).toLowerCase();
+        if (key.isNotEmpty) {
+          parsed[key] = asBool(entry.value);
+        }
+      }
+    }
+
+    return MobileModuleAccess(
+      clientId: asInt(row['id_cliente']),
+      canManageModules: asBool(row['can_manage_modules']),
+      tableReady: asBool(row['table_ready']),
+      modules: parsed,
+    );
+  }
+}
+
 class VehiclePosition {
   const VehiclePosition({
     required this.plate,
@@ -330,12 +373,92 @@ class MediaEvidence {
   }
 }
 
+class ChecklistVehicle {
+  const ChecklistVehicle({
+    required this.idMovil,
+    required this.plate,
+    required this.brand,
+    required this.model,
+  });
+
+  final int idMovil;
+  final String plate;
+  final String brand;
+  final String model;
+
+  factory ChecklistVehicle.fromBackend(Map<String, dynamic> row) {
+    return ChecklistVehicle(
+      idMovil: asInt(row['id_movil']),
+      plate: asString(row['placa']),
+      brand: asString(row['marca']),
+      model: asString(row['modelo']),
+    );
+  }
+}
+
+class ChecklistItemDefinition {
+  const ChecklistItemDefinition({
+    required this.idItem,
+    required this.name,
+    required this.typeItem,
+  });
+
+  final int idItem;
+  final String name;
+  final String typeItem;
+
+  factory ChecklistItemDefinition.fromBackend(Map<String, dynamic> row) {
+    return ChecklistItemDefinition(
+      idItem: asInt(row['id_item']),
+      name: asString(row['nom_item']),
+      typeItem: asString(row['tipo_item']),
+    );
+  }
+}
+
+class ChecklistHistoryEntry {
+  const ChecklistHistoryEntry({
+    required this.idCheck,
+    required this.date,
+    required this.plate,
+    required this.totalItems,
+    required this.totalOk,
+    required this.totalFallas,
+  });
+
+  final int idCheck;
+  final String date;
+  final String plate;
+  final int totalItems;
+  final int totalOk;
+  final int totalFallas;
+
+  factory ChecklistHistoryEntry.fromBackend(Map<String, dynamic> row) {
+    return ChecklistHistoryEntry(
+      idCheck: asInt(row['id_check']),
+      date: asString(row['fecha']),
+      plate: asString(row['placa']),
+      totalItems: asInt(row['total_items']),
+      totalOk: asInt(row['total_ok']),
+      totalFallas: asInt(row['total_fallas']),
+    );
+  }
+}
+
 String asString(dynamic value, {String fallback = ''}) {
   if (value == null) {
     return fallback;
   }
   final String str = value.toString();
   return str.trim().isEmpty ? fallback : str;
+}
+
+bool asBool(dynamic value) {
+  if (value is bool) {
+    return value;
+  }
+  final String raw = asString(value).toLowerCase();
+  return raw == '1' || raw == 'true' || raw == 't' || raw == 'yes' || raw == 'si' || raw == 'on';
 }
 
 int asInt(dynamic value) {

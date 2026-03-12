@@ -4,21 +4,40 @@ import '../app_controller.dart';
 import '../config/app_config.dart';
 import '../models/domain_models.dart';
 import 'alarms_page.dart';
+import 'checklist_page.dart';
 import 'commands_page.dart';
 import 'geofences_page.dart';
 import 'map_page.dart';
 import 'media_evidence_page.dart';
-import 'panic_page.dart';
+import 'module_admin_page.dart';
 import 'vehicle_detail_page.dart';
 
-class DashboardPage extends StatelessWidget {
+class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key, required this.controller});
 
   final AppController controller;
 
   @override
+  State<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends State<DashboardPage> {
+  final TextEditingController _searchController = TextEditingController();
+  String _plateQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final bool hasData = controller.positions.isNotEmpty;
+    final AppController controller = widget.controller;
+    final List<VehiclePosition> allPositions = controller.positions;
+    final List<VehiclePosition> filteredPositions = _filterByPlate(allPositions);
+    final bool hasData = allPositions.isNotEmpty;
+    final bool hasFilter = _plateQuery.trim().isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -38,18 +57,45 @@ class DashboardPage extends StatelessWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () => controller.refreshDashboard(),
-        child: _buildBody(hasData: hasData),
+        child: _buildBody(
+          hasData: hasData,
+          allPositions: allPositions,
+          filteredPositions: filteredPositions,
+          hasFilter: hasFilter,
+        ),
       ),
     );
   }
 
-  Widget _buildBody({required bool hasData}) {
+  List<VehiclePosition> _filterByPlate(List<VehiclePosition> source) {
+    final String query = _plateQuery.trim().toLowerCase();
+    if (query.isEmpty) {
+      return source;
+    }
+    return source.where((VehiclePosition item) => item.plate.toLowerCase().contains(query)).toList();
+  }
+
+  Widget _buildBody({
+    required bool hasData,
+    required List<VehiclePosition> allPositions,
+    required List<VehiclePosition> filteredPositions,
+    required bool hasFilter,
+  }) {
+    final AppController controller = widget.controller;
+
     if (controller.loadingDashboard && !hasData) {
-      return const Center(child: CircularProgressIndicator());
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: const <Widget>[
+          SizedBox(height: 180),
+          Center(child: CircularProgressIndicator()),
+        ],
+      );
     }
 
     if (!hasData && (controller.errorMessage ?? '').isNotEmpty) {
       return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
         children: <Widget>[
           const Icon(Icons.warning_amber_rounded, size: 52, color: Colors.orange),
@@ -68,22 +114,56 @@ class DashboardPage extends StatelessWidget {
       );
     }
 
-    return ListView.builder(
+    return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 28),
-      itemCount: controller.positions.length + 1,
-      itemBuilder: (BuildContext context, int index) {
-        if (index == 0) {
-          return _SummaryCard(
-            vehiclesCount: controller.vehiclesCount,
-            username: controller.session?.username ?? '',
-            loading: controller.loadingDashboard,
+      children: <Widget>[
+        Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+            child: TextField(
+              controller: _searchController,
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                labelText: 'Buscar placa',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _plateQuery.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Limpiar',
+                        icon: const Icon(Icons.close),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _plateQuery = '');
+                        },
+                      ),
+              ),
+              onChanged: (String value) => setState(() => _plateQuery = value),
+            ),
+          ),
+        ),
+        _SummaryCard(
+          vehiclesCount: controller.vehiclesCount,
+          username: controller.session?.username ?? '',
+          loading: controller.loadingDashboard,
+          controller: controller,
+        ),
+        if (hasFilter && filteredPositions.isEmpty)
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.all(14),
+              child: Text('No hay vehiculos para esa placa.'),
+            ),
+          ),
+        ...filteredPositions.map(
+          (VehiclePosition item) => _PositionCard(
+            item: item,
             controller: controller,
-          );
-        }
-        final VehiclePosition item = controller.positions[index - 1];
-        return _PositionCard(item: item, controller: controller);
-      },
+          ),
+        ),
+      ],
     );
   }
 }
@@ -103,6 +183,8 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final List<_ActionItem> actions = _buildActions(context);
+
     return Card(
       color: const Color(0xfff5f9ff),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -140,87 +222,188 @@ class _SummaryCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: <Widget>[
-                FilledButton.tonalIcon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => MapPage(controller: controller),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.map_outlined),
-                  label: const Text('Mapa'),
-                ),
-                FilledButton.tonalIcon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => AlarmsPage(controller: controller),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.warning_amber_rounded),
-                  label: const Text('Alarmas'),
-                ),
-                FilledButton.tonalIcon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => CommandsPage(controller: controller),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.terminal),
-                  label: const Text('Comandos'),
-                ),
-                FilledButton.tonalIcon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => GeofencesPage(controller: controller),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.crop_free),
-                  label: const Text('Geocercas'),
-                ),
-                FilledButton.tonalIcon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => MediaEvidencePage(controller: controller),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.video_library_outlined),
-                  label: const Text('Evidencias'),
-                ),
-                FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xffc62828),
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => PanicPage(controller: controller),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.warning_amber),
-                  label: const Text('Panico'),
-                ),
-              ],
-            ),
+            _ActionGrid(actions: actions),
+            if (actions.isEmpty) ...<Widget>[
+              const SizedBox(height: 6),
+              const Text(
+                'No hay modulos habilitados para esta cuenta.',
+                style: TextStyle(fontSize: 12, color: Color(0xff607d8b)),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
+
+  List<_ActionItem> _buildActions(BuildContext context) {
+    final List<_ActionItem> items = <_ActionItem>[];
+
+    if (controller.isModuleEnabled('map', fallback: true)) {
+      items.add(
+        _ActionItem(
+          icon: Icons.map_outlined,
+          label: 'Mapa',
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => MapPage(controller: controller),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    if (controller.isModuleEnabled('alarms', fallback: true)) {
+      items.add(
+        _ActionItem(
+          icon: Icons.warning_amber_rounded,
+          label: 'Alarmas',
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => AlarmsPage(controller: controller),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    if (controller.isModuleEnabled('commands')) {
+      items.add(
+        _ActionItem(
+          icon: Icons.terminal,
+          label: 'Comandos',
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => CommandsPage(controller: controller),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    if (controller.isModuleEnabled('geofences', fallback: true)) {
+      items.add(
+        _ActionItem(
+          icon: Icons.crop_free,
+          label: 'Geocercas',
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => GeofencesPage(controller: controller),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    if (controller.isModuleEnabled('reports', fallback: true)) {
+      items.add(
+        _ActionItem(
+          icon: Icons.history_edu_outlined,
+          label: 'Reportes',
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => MediaEvidencePage(controller: controller),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    if (controller.isModuleEnabled('checklist', fallback: true)) {
+      items.add(
+        _ActionItem(
+          icon: Icons.checklist_rtl_outlined,
+          label: 'Checklist',
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => ChecklistPage(controller: controller),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    if (controller.canManageModules) {
+      items.add(
+        _ActionItem(
+          icon: Icons.admin_panel_settings_outlined,
+          label: 'Admin app',
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => ModuleAdminPage(controller: controller),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    return items;
+  }
+}
+
+class _ActionGrid extends StatelessWidget {
+  const _ActionGrid({required this.actions});
+
+  final List<_ActionItem> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    if (actions.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final int columns = constraints.maxWidth > 620 ? 3 : 2;
+        final double ratio = constraints.maxWidth > 620 ? 3.3 : 2.9;
+        return GridView.builder(
+          itemCount: actions.length,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+            childAspectRatio: ratio,
+          ),
+          itemBuilder: (BuildContext context, int index) {
+            final _ActionItem item = actions[index];
+            return FilledButton.tonalIcon(
+              onPressed: item.onTap,
+              icon: Icon(item.icon),
+              label: Text(item.label),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _ActionItem {
+  const _ActionItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
 }
 
 class _PositionCard extends StatelessWidget {

@@ -320,6 +320,108 @@ class BackendClient {
     return media;
   }
 
+  Future<MobileModuleAccess> fetchModuleAccess({int? targetClientId}) async {
+    final Map<String, dynamic> envelope = await _postJsonApiEnvelope(
+      path: 'includes/mobile_app_admin_api.php',
+      payload: <String, dynamic>{
+        'action': 'get_modules',
+        if (targetClientId != null) 'target_client_id': targetClientId,
+      },
+    );
+    final dynamic data = envelope['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const BackendException('Respuesta invalida de modulos.');
+    }
+    return MobileModuleAccess.fromBackend(data);
+  }
+
+  Future<MobileModuleAccess> setModuleAccess({
+    required String module,
+    required bool enabled,
+    int? targetClientId,
+  }) async {
+    final Map<String, dynamic> envelope = await _postJsonApiEnvelope(
+      path: 'includes/mobile_app_admin_api.php',
+      payload: <String, dynamic>{
+        'action': 'set_module',
+        'module': module,
+        'enabled': enabled,
+        if (targetClientId != null) 'target_client_id': targetClientId,
+      },
+    );
+    final dynamic data = envelope['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const BackendException('Respuesta invalida al guardar modulo.');
+    }
+    return MobileModuleAccess.fromBackend(data);
+  }
+
+  Future<List<ChecklistVehicle>> fetchChecklistVehicles() async {
+    final Map<String, dynamic> envelope = await _postJsonApiEnvelope(
+      path: 'includes/checklist_preoperativo_api.php',
+      payload: const <String, dynamic>{'action': 'obtener_vehiculos'},
+    );
+    final dynamic data = envelope['data'];
+    if (data is! List<dynamic>) {
+      return const <ChecklistVehicle>[];
+    }
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(ChecklistVehicle.fromBackend)
+        .toList(growable: false);
+  }
+
+  Future<List<ChecklistItemDefinition>> fetchChecklistItems() async {
+    final Map<String, dynamic> envelope = await _postJsonApiEnvelope(
+      path: 'includes/checklist_preoperativo_api.php',
+      payload: const <String, dynamic>{'action': 'obtener_items'},
+    );
+    final dynamic data = envelope['data'];
+    if (data is! List<dynamic>) {
+      return const <ChecklistItemDefinition>[];
+    }
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(ChecklistItemDefinition.fromBackend)
+        .toList(growable: false);
+  }
+
+  Future<ActionResult> saveChecklist({
+    required int idMovil,
+    required Map<String, dynamic> checks,
+  }) async {
+    final Map<String, dynamic> envelope = await _postJsonApiEnvelope(
+      path: 'includes/checklist_preoperativo_api.php',
+      payload: <String, dynamic>{
+        'action': 'guardar_checklist',
+        'id_movil': idMovil,
+        'checks': checks,
+      },
+    );
+    return ActionResult(
+      ok: true,
+      message: asString(envelope['message'], fallback: 'Checklist guardado correctamente.'),
+    );
+  }
+
+  Future<List<ChecklistHistoryEntry>> fetchChecklistHistory({int limit = 80}) async {
+    final Map<String, dynamic> envelope = await _postJsonApiEnvelope(
+      path: 'includes/checklist_preoperativo_api.php',
+      payload: <String, dynamic>{
+        'action': 'obtener_historial',
+        'limit': limit,
+      },
+    );
+    final dynamic data = envelope['data'];
+    if (data is! List<dynamic>) {
+      return const <ChecklistHistoryEntry>[];
+    }
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(ChecklistHistoryEntry.fromBackend)
+        .toList(growable: false);
+  }
+
   Future<ActionResult> triggerPanic({
     required String plate,
   }) async {
@@ -423,6 +525,58 @@ class BackendClient {
     } catch (_) {
       throw BackendException('No se pudo decodificar respuesta JSON: $rawBody');
     }
+  }
+
+  Future<Map<String, dynamic>> _postJsonApiEnvelope({
+    required String path,
+    required Map<String, dynamic> payload,
+  }) async {
+    if (!hasSession) {
+      throw const BackendException('Sesion no disponible. Inicia sesion de nuevo.');
+    }
+
+    final http.Response response = await _httpClient.post(
+      AppConfig.resolve(path),
+      headers: <String, String>{
+        'Content-Type': 'application/json',
+        'Cookie': _sessionCookie!,
+      },
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw BackendException('Backend devolvio HTTP ${response.statusCode}.');
+    }
+
+    final String rawBody = response.body.trim();
+    if (rawBody.isEmpty) {
+      throw const BackendException('Respuesta vacia del backend.');
+    }
+    if (rawBody.startsWith('<')) {
+      throw const BackendException('Sesion expirada o respuesta invalida del backend.');
+    }
+
+    final dynamic decoded;
+    try {
+      decoded = jsonDecode(rawBody);
+    } catch (_) {
+      throw BackendException('No se pudo decodificar respuesta JSON: $rawBody');
+    }
+
+    if (decoded is! Map<String, dynamic>) {
+      throw const BackendException('Formato de respuesta inesperado.');
+    }
+
+    final bool success = asBool(decoded['success']);
+    if (!success) {
+      final String errorMessage = asString(
+        decoded['error'],
+        fallback: asString(decoded['message'], fallback: 'Operacion no exitosa.'),
+      );
+      throw BackendException(errorMessage);
+    }
+
+    return decoded;
   }
 
   Map<String, dynamic> _decodeRow(dynamic item) {

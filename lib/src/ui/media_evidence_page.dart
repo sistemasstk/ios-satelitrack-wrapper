@@ -164,7 +164,7 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Evidencias'),
+        title: const Text('Reportes / Historial'),
         actions: <Widget>[
           IconButton(
             onPressed: _loadingVehicles ? null : _loadVehicles,
@@ -225,7 +225,7 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
                       child: FilledButton.icon(
                         onPressed: _loadingMedia ? null : _loadMedia,
                         icon: const Icon(Icons.search),
-                        label: const Text('Consultar evidencias'),
+                        label: const Text('Consultar historial'),
                       ),
                     ),
                   ],

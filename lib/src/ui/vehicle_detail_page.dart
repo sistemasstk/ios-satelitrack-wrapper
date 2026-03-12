@@ -7,7 +7,6 @@ import 'package:latlong2/latlong.dart';
 import '../app_controller.dart';
 import '../models/domain_models.dart';
 import 'commands_page.dart';
-import 'panic_page.dart';
 
 class VehicleDetailPage extends StatefulWidget {
   const VehicleDetailPage({
@@ -93,22 +92,12 @@ class _VehicleDetailPageState extends State<VehicleDetailPage> {
     );
   }
 
-  void _openPanic() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => PanicPage(
-          controller: widget.controller,
-          initialPlate: _item.plate,
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final LatLng center = _item.hasCoordinate
         ? LatLng(_item.latitude, _item.longitude)
         : const LatLng(4.711, -74.0721);
+    final bool canUseCommands = widget.controller.isModuleEnabled('commands');
 
     return Scaffold(
       appBar: AppBar(
@@ -216,28 +205,17 @@ class _VehicleDetailPageState extends State<VehicleDetailPage> {
                   label: const Text('Actualizar'),
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _loading ? null : _openCommands,
-                  icon: const Icon(Icons.terminal),
-                  label: const Text('Comandos'),
+              if (canUseCommands) ...<Widget>[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _loading ? null : _openCommands,
+                    icon: const Icon(Icons.terminal),
+                    label: const Text('Comandos'),
+                  ),
                 ),
-              ),
+              ],
             ],
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xffc62828),
-                foregroundColor: Colors.white,
-              ),
-              onPressed: _loading ? null : _openPanic,
-              icon: const Icon(Icons.warning_amber),
-              label: const Text('Panico'),
-            ),
           ),
         ],
       ),

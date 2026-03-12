@@ -23,6 +23,7 @@ class AppController extends ChangeNotifier {
   bool loadingDashboard = false;
 
   UserSession? session;
+  MobileModuleAccess? moduleAccess;
   int vehiclesCount = 0;
   List<VehiclePosition> positions = const <VehiclePosition>[];
   String? errorMessage;
@@ -46,6 +47,11 @@ class AppController extends ChangeNotifier {
 
     try {
       await refreshDashboard(silent: true);
+      try {
+        await loadModuleAccess(silent: true);
+      } catch (_) {
+        // Keep dashboard available even if module permissions cannot be loaded.
+      }
     } catch (_) {
       await _clearLocalSession();
     }
@@ -106,6 +112,11 @@ class AppController extends ChangeNotifier {
       await _sessionStore.save(newSession);
       try {
         await refreshDashboard(silent: true);
+        try {
+          await loadModuleAccess(silent: true);
+        } catch (_) {
+          // Module visibility falls back to local defaults when API is unavailable.
+        }
       } on BackendException {
         if (session == null) {
           loggingIn = false;
@@ -149,6 +160,13 @@ class AppController extends ChangeNotifier {
       final List<VehiclePosition> freshPositions = await _backendClient.fetchPositions();
       vehiclesCount = count;
       positions = freshPositions;
+      if (moduleAccess == null) {
+        try {
+          moduleAccess = await _backendClient.fetchModuleAccess();
+        } catch (_) {
+          // Keep fallback visibility when module API cannot be reached.
+        }
+      }
       errorMessage = null;
     } on BackendException catch (ex) {
       errorMessage = ex.message;
@@ -166,6 +184,58 @@ class AppController extends ChangeNotifier {
     await _backendClient.logout();
     await _clearLocalSession();
     notifyListeners();
+  }
+
+  bool isModuleEnabled(String moduleKey, {bool fallback = false}) {
+    final MobileModuleAccess? access = moduleAccess;
+    if (access != null) {
+      return access.isEnabled(moduleKey, fallback: fallback);
+    }
+    return _defaultModuleFallback(moduleKey, fallback: fallback);
+  }
+
+  bool get canManageModules => moduleAccess?.canManageModules ?? false;
+
+  Future<MobileModuleAccess?> loadModuleAccess({
+    int? targetClientId,
+    bool silent = false,
+  }) async {
+    try {
+      final MobileModuleAccess access =
+          await _backendClient.fetchModuleAccess(targetClientId: targetClientId);
+      moduleAccess = access;
+      if (!silent) {
+        notifyListeners();
+      }
+      return access;
+    } on BackendException catch (ex) {
+      await _handleBackendFailure(ex);
+      if (!silent) {
+        errorMessage = ex.message;
+        notifyListeners();
+      }
+      return null;
+    }
+  }
+
+  Future<ActionResult> updateModuleAccess({
+    required String module,
+    required bool enabled,
+    int? targetClientId,
+  }) async {
+    try {
+      final MobileModuleAccess access = await _backendClient.setModuleAccess(
+        module: module,
+        enabled: enabled,
+        targetClientId: targetClientId,
+      );
+      moduleAccess = access;
+      notifyListeners();
+      return const ActionResult(ok: true, message: 'Modulo actualizado.');
+    } on BackendException catch (ex) {
+      await _handleBackendFailure(ex);
+      return ActionResult(ok: false, message: ex.message);
+    }
   }
 
   Future<List<VehicleRef>> loadVehicles() async {
@@ -327,6 +397,48 @@ class AppController extends ChangeNotifier {
     }
   }
 
+  Future<List<ChecklistVehicle>> loadChecklistVehicles() async {
+    try {
+      return await _backendClient.fetchChecklistVehicles();
+    } on BackendException catch (ex) {
+      await _handleBackendFailure(ex);
+      rethrow;
+    }
+  }
+
+  Future<List<ChecklistItemDefinition>> loadChecklistItems() async {
+    try {
+      return await _backendClient.fetchChecklistItems();
+    } on BackendException catch (ex) {
+      await _handleBackendFailure(ex);
+      rethrow;
+    }
+  }
+
+  Future<List<ChecklistHistoryEntry>> loadChecklistHistory({int limit = 80}) async {
+    try {
+      return await _backendClient.fetchChecklistHistory(limit: limit);
+    } on BackendException catch (ex) {
+      await _handleBackendFailure(ex);
+      rethrow;
+    }
+  }
+
+  Future<ActionResult> saveChecklist({
+    required int idMovil,
+    required Map<String, dynamic> checks,
+  }) async {
+    try {
+      return await _backendClient.saveChecklist(
+        idMovil: idMovil,
+        checks: checks,
+      );
+    } on BackendException catch (ex) {
+      await _handleBackendFailure(ex);
+      rethrow;
+    }
+  }
+
   Future<ActionResult> triggerPanic({
     required String plate,
   }) async {
@@ -344,6 +456,7 @@ class AppController extends ChangeNotifier {
 
   Future<void> _clearLocalSession() async {
     session = null;
+    moduleAccess = null;
     vehiclesCount = 0;
     positions = const <VehiclePosition>[];
     errorMessage = null;
@@ -361,6 +474,22 @@ class AppController extends ChangeNotifier {
     if (exception.message.toLowerCase().contains('sesion')) {
       await _clearLocalSession();
       notifyListeners();
+    }
+  }
+
+  bool _defaultModuleFallback(String moduleKey, {bool fallback = false}) {
+    switch (moduleKey) {
+      case 'map':
+      case 'alarms':
+      case 'reports':
+      case 'checklist':
+        return true;
+      case 'commands':
+        return false;
+      case 'geofences':
+        return true;
+      default:
+        return fallback;
     }
   }
 }

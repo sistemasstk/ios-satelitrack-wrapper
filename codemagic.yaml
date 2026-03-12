@@ -27,6 +27,31 @@ workflows:
           if [ ! -d ios/Runner.xcodeproj ]; then
             flutter create --platforms=ios --org novadev --project-name ios_satelitrack_wrapper .
           fi
+      - name: Enable iOS push capabilities
+        script: |
+          INFO_PLIST="ios/Runner/Info.plist"
+          ENTITLEMENTS="ios/Runner/Runner.entitlements"
+          PBXPROJ="ios/Runner.xcodeproj/project.pbxproj"
+
+          cat > "$ENTITLEMENTS" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+            <dict>
+              <key>aps-environment</key>
+              <string>production</string>
+            </dict>
+          </plist>
+          PLIST
+
+          if [ -f "$INFO_PLIST" ]; then
+            /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" "$INFO_PLIST" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string remote-notification" "$INFO_PLIST" 2>/dev/null || true
+          fi
+
+          if [ -f "$PBXPROJ" ] && ! grep -q "Runner/Runner.entitlements" "$PBXPROJ"; then
+            perl -0pi -e 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Automatic;\\n\\t\\t\\t\\tCODE_SIGN_ENTITLEMENTS = Runner\\/Runner.entitlements;/g' "$PBXPROJ"
+          fi
       - name: Allow app.satelitrack.com.co over ATS
         script: |
           INFO_PLIST="ios/Runner/Info.plist"
@@ -218,6 +243,31 @@ workflows:
         script: |
           if [ ! -d ios/Runner.xcodeproj ]; then
             flutter create --platforms=ios --org novadev --project-name ios_satelitrack_wrapper .
+          fi
+      - name: Enable iOS push capabilities
+        script: |
+          INFO_PLIST="ios/Runner/Info.plist"
+          ENTITLEMENTS="ios/Runner/Runner.entitlements"
+          PBXPROJ="ios/Runner.xcodeproj/project.pbxproj"
+
+          cat > "$ENTITLEMENTS" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+            <dict>
+              <key>aps-environment</key>
+              <string>production</string>
+            </dict>
+          </plist>
+          PLIST
+
+          if [ -f "$INFO_PLIST" ]; then
+            /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" "$INFO_PLIST" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string remote-notification" "$INFO_PLIST" 2>/dev/null || true
+          fi
+
+          if [ -f "$PBXPROJ" ] && ! grep -q "Runner/Runner.entitlements" "$PBXPROJ"; then
+            perl -0pi -e 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Automatic;\\n\\t\\t\\t\\tCODE_SIGN_ENTITLEMENTS = Runner\\/Runner.entitlements;/g' "$PBXPROJ"
           fi
       - name: Allow app.satelitrack.com.co over ATS
         script: |
