@@ -22,7 +22,11 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
   List<VehicleRef> _vehicles = const <VehicleRef>[];
   List<MediaEvidence> _items = const <MediaEvidence>[];
   int? _selectedVehicleId;
-  DateTime _from = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+  DateTime _from = DateTime(
+    DateTime.now().year,
+    DateTime.now().month,
+    DateTime.now().day,
+  ).subtract(const Duration(days: 7));
   DateTime _to = DateTime.now();
   String? _error;
 
@@ -93,6 +97,10 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
     final int? idMovil = _selectedVehicleId;
     if (idMovil == null) {
       _showMessage('Selecciona un vehiculo.');
+      return;
+    }
+    if (_from.isAfter(_to)) {
+      _showMessage('La fecha inicial no puede ser mayor a la fecha final.');
       return;
     }
 
