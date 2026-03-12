@@ -8,6 +8,7 @@ import '../config/app_config.dart';
 import '../models/domain_models.dart';
 
 enum _ReportType {
+  history,
   evidence,
   alarms,
 }
@@ -25,10 +26,11 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
   bool _loadingVehicles = false;
   bool _loadingMedia = false;
   List<VehicleRef> _vehicles = const <VehicleRef>[];
+  List<TravelHistoryItem> _historyItems = const <TravelHistoryItem>[];
   List<MediaEvidence> _items = const <MediaEvidence>[];
   List<AlarmHistoryItem> _alarmItems = const <AlarmHistoryItem>[];
   int? _selectedVehicleId;
-  _ReportType _reportType = _ReportType.evidence;
+  _ReportType _reportType = _ReportType.history;
   DateTime _from = DateTime.now().subtract(const Duration(hours: 24));
   DateTime _to = DateTime.now();
   String? _error;
@@ -110,11 +112,22 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
     setState(() {
       _loadingMedia = true;
       _error = null;
+      _historyItems = const <TravelHistoryItem>[];
       _items = const <MediaEvidence>[];
       _alarmItems = const <AlarmHistoryItem>[];
     });
     try {
-      if (_reportType == _ReportType.evidence) {
+      if (_reportType == _ReportType.history) {
+        final List<TravelHistoryItem> items = await widget.controller.loadTravelHistory(
+          idMovil: idMovil,
+          from: _from,
+          to: _to,
+        );
+        if (!mounted) {
+          return;
+        }
+        setState(() => _historyItems = items);
+      } else if (_reportType == _ReportType.evidence) {
         final List<MediaEvidence> items = await widget.controller.loadMediaEvidence(
           idMovil: idMovil,
           from: _from,
@@ -213,6 +226,10 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
                       ),
                       items: const <DropdownMenuItem<_ReportType>>[
                         DropdownMenuItem<_ReportType>(
+                          value: _ReportType.history,
+                          child: Text('Historial de recorrido'),
+                        ),
+                        DropdownMenuItem<_ReportType>(
                           value: _ReportType.evidence,
                           child: Text('Evidencias (foto/video)'),
                         ),
@@ -229,6 +246,7 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
                               }
                               setState(() {
                                 _reportType = value;
+                                _historyItems = const <TravelHistoryItem>[];
                                 _items = const <MediaEvidence>[];
                                 _alarmItems = const <AlarmHistoryItem>[];
                               });
@@ -309,6 +327,12 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
       );
     }
 
+    if (_reportType == _ReportType.history && _historyItems.isEmpty) {
+      return const Center(
+        child: Text('Sin resultados. Ajusta filtros y consulta.'),
+      );
+    }
+
     if (_reportType == _ReportType.evidence && _items.isEmpty) {
       return const Center(
         child: Text('Sin resultados. Ajusta filtros y consulta.'),
@@ -318,6 +342,42 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
     if (_reportType == _ReportType.alarms && _alarmItems.isEmpty) {
       return const Center(
         child: Text('Sin resultados. Ajusta filtros y consulta.'),
+      );
+    }
+
+    if (_reportType == _ReportType.history) {
+      return ListView.builder(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        itemCount: _historyItems.length,
+        itemBuilder: (BuildContext context, int index) {
+          final TravelHistoryItem item = _historyItems[index];
+          return Card(
+            margin: const EdgeInsets.only(bottom: 10),
+            child: ListTile(
+              leading: const Icon(Icons.alt_route),
+              title: Text(item.gpsDate),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const SizedBox(height: 2),
+                  Text(item.position, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 2),
+                  Text('Velocidad: ${item.speed} km/h  |  Ignicion: ${item.ignition}'),
+                ],
+              ),
+              trailing: item.hasCoordinate
+                  ? IconButton(
+                      tooltip: 'Ver mapa',
+                      onPressed: () => _openExternalUrl(
+                        'https://www.openstreetmap.org/?mlat=${item.latitude}&mlon=${item.longitude}#map=16/${item.latitude}/${item.longitude}',
+                      ),
+                      icon: const Icon(Icons.map_outlined),
+                    )
+                  : null,
+            ),
+          );
+        },
       );
     }
 

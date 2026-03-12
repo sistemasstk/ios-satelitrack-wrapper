@@ -3,6 +3,16 @@ import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 class NotificationTokenService {
+  Stream<TokenResult> tokenRefreshStream() {
+    return FirebaseMessaging.instance.onTokenRefresh.map(
+      (String token) => TokenResult(
+        token: token.trim().isEmpty ? 'vacio' : token.trim(),
+        provider: 'fcm',
+        platform: _platformName(),
+      ),
+    );
+  }
+
   Future<TokenResult> resolveToken() async {
     try {
       final FirebaseMessaging messaging = FirebaseMessaging.instance;
@@ -18,15 +28,17 @@ class NotificationTokenService {
       }
 
       String? apnsToken;
-      for (int i = 0; i < 10; i++) {
-        apnsToken = await messaging.getAPNSToken();
-        if (apnsToken != null && apnsToken.isNotEmpty) {
+      String? fcmToken;
+      for (int i = 0; i < 15; i++) {
+        apnsToken ??= await messaging.getAPNSToken();
+        fcmToken ??= await messaging.getToken();
+
+        if ((apnsToken ?? '').isNotEmpty || (fcmToken ?? '').isNotEmpty) {
           break;
         }
-        await Future<void>.delayed(const Duration(milliseconds: 250));
-      }
 
-      final String? fcmToken = await messaging.getToken();
+        await Future<void>.delayed(const Duration(milliseconds: 350));
+      }
 
       if (apnsToken != null && apnsToken.isNotEmpty) {
         return TokenResult(

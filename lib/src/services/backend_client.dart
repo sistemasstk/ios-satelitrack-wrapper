@@ -61,6 +61,22 @@ class BackendClient {
           message: 'No se pudo establecer sesion con el backend.',
         );
       }
+      // Best-effort token sync right after login to avoid losing iOS token registration.
+      if (tokenId.trim().isNotEmpty && tokenId.trim() != 'vacio') {
+        try {
+          await _postFunctionMap(
+            idfn: 18,
+            payload: <String, dynamic>{
+              'token_id': tokenId.trim(),
+              'version': _appVersionNumber(),
+              'token_provider': tokenProvider,
+              'token_platform': tokenPlatform,
+            },
+          );
+        } catch (_) {
+          // Ignore here; AppController retries token sync in background.
+        }
+      }
       return const LoginResult(success: true, message: '');
     }
 
@@ -108,6 +124,33 @@ class BackendClient {
     }
     vehicles.sort((VehicleRef a, VehicleRef b) => a.plate.compareTo(b.plate));
     return vehicles;
+  }
+
+  Future<List<TravelHistoryItem>> fetchTravelHistory({
+    required int idMovil,
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    final List<dynamic> list = await _postFunctionList(
+      idfn: 4,
+      payload: <String, dynamic>{
+        'limitevel': 0,
+        'idmovil': idMovil,
+        'finicio': _formatDateTime(from),
+        'ffin': _formatDateTime(to),
+      },
+    );
+
+    final List<TravelHistoryItem> history = <TravelHistoryItem>[];
+    for (final dynamic item in list) {
+      final Map<String, dynamic> row = _decodeRow(item);
+      if (row.isEmpty) {
+        continue;
+      }
+      history.add(TravelHistoryItem.fromBackend(row));
+    }
+    history.sort((TravelHistoryItem a, TravelHistoryItem b) => b.gpsDate.compareTo(a.gpsDate));
+    return history;
   }
 
   Future<List<PendingAlarm>> fetchPendingAlarms() async {

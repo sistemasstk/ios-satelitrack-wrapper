@@ -193,6 +193,37 @@ class VehicleRef {
   }
 }
 
+class TravelHistoryItem {
+  const TravelHistoryItem({
+    required this.gpsDate,
+    required this.position,
+    required this.speed,
+    required this.ignition,
+    required this.latitude,
+    required this.longitude,
+  });
+
+  final String gpsDate;
+  final String position;
+  final String speed;
+  final String ignition;
+  final double latitude;
+  final double longitude;
+
+  bool get hasCoordinate => latitude != 0 && longitude != 0;
+
+  factory TravelHistoryItem.fromBackend(Map<String, dynamic> row) {
+    return TravelHistoryItem(
+      gpsDate: asString(row['fechagps'], fallback: asString(row['fecha_gps'])),
+      position: asString(row['posicion']),
+      speed: asString(row['velocidad']),
+      ignition: asString(row['ignicionc'], fallback: asString(row['ignicion'])),
+      latitude: row['lat'] == null ? asDouble(row['latitud']) : asDouble(row['lat']),
+      longitude: row['longi'] == null ? asDouble(row['longitud']) : asDouble(row['longi']),
+    );
+  }
+}
+
 class PendingAlarm {
   const PendingAlarm({
     required this.eventId,

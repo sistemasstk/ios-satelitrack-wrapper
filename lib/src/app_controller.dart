@@ -19,6 +19,7 @@ class AppController extends ChangeNotifier {
   final BackendClient _backendClient;
   final SessionStore _sessionStore;
   final NotificationTokenService _notificationService;
+  StreamSubscription<TokenResult>? _tokenRefreshSubscription;
 
   bool bootstrapping = true;
   bool loggingIn = false;
@@ -33,6 +34,7 @@ class AppController extends ChangeNotifier {
   bool get isAuthenticated => session != null;
 
   Future<void> bootstrap() async {
+    _ensureTokenRefreshListener();
     bootstrapping = true;
     errorMessage = null;
     notifyListeners();
@@ -68,6 +70,7 @@ class AppController extends ChangeNotifier {
     required String password,
     required int userType,
   }) async {
+    _ensureTokenRefreshListener();
     loggingIn = true;
     errorMessage = null;
     notifyListeners();
@@ -245,6 +248,23 @@ class AppController extends ChangeNotifier {
   Future<List<VehicleRef>> loadVehicles() async {
     try {
       return await _backendClient.fetchVehicles();
+    } on BackendException catch (ex) {
+      await _handleBackendFailure(ex);
+      rethrow;
+    }
+  }
+
+  Future<List<TravelHistoryItem>> loadTravelHistory({
+    required int idMovil,
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    try {
+      return await _backendClient.fetchTravelHistory(
+        idMovil: idMovil,
+        from: from,
+        to: to,
+      );
     } on BackendException catch (ex) {
       await _handleBackendFailure(ex);
       rethrow;
@@ -458,15 +478,31 @@ class AppController extends ChangeNotifier {
     return _backendClient.sessionCookie;
   }
 
+  void _ensureTokenRefreshListener() {
+    if (_tokenRefreshSubscription != null) {
+      return;
+    }
+
+    _tokenRefreshSubscription = _notificationService.tokenRefreshStream().listen(
+      (TokenResult tokenResult) {
+        unawaited(_syncNotificationToken(initialToken: tokenResult));
+      },
+      onError: (_) {
+        // Ignore stream errors; periodic sync still runs on login/bootstrap.
+      },
+    );
+  }
+
   Future<void> _syncNotificationToken({TokenResult? initialToken}) async {
     if (session == null) {
       return;
     }
 
     TokenResult? tokenResult = initialToken;
-    for (int attempt = 0; attempt < 3; attempt++) {
+    for (int attempt = 0; attempt < 12; attempt++) {
       if (attempt > 0) {
-        await Future<void>.delayed(Duration(milliseconds: 800 * attempt));
+        final int waitSeconds = attempt > 6 ? 6 : attempt;
+        await Future<void>.delayed(Duration(seconds: waitSeconds));
       }
 
       if (tokenResult == null ||
@@ -532,6 +568,11 @@ class AppController extends ChangeNotifier {
 
   @override
   void dispose() {
+    final StreamSubscription<TokenResult>? subscription = _tokenRefreshSubscription;
+    if (subscription != null) {
+      unawaited(subscription.cancel());
+    }
+    _tokenRefreshSubscription = null;
     _backendClient.dispose();
     super.dispose();
   }
