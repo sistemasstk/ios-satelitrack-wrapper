@@ -19,6 +19,7 @@ workflows:
         APP_DISPLAY_NAME: "Satelitrack GPS"
         APP_STORE_VERSION: "1.2.0"
         APPLE_TEAM_ID: "9JJHM44432"
+        IOS_BUNDLE_IDENTIFIER: "novadev.Satelital"
       ios_signing:
         distribution_type: app_store
         bundle_identifier: novadev.Satelital
@@ -100,7 +101,7 @@ workflows:
           fi
       - name: Force bundle identifier
         script: |
-          sed -i.bak 's/PRODUCT_BUNDLE_IDENTIFIER = [^;]*;/PRODUCT_BUNDLE_IDENTIFIER = novadev.Satelital;/g' ios/Runner.xcodeproj/project.pbxproj
+          sed -i.bak "s/PRODUCT_BUNDLE_IDENTIFIER = [^;]*;/PRODUCT_BUNDLE_IDENTIFIER = ${IOS_BUNDLE_IDENTIFIER};/g" ios/Runner.xcodeproj/project.pbxproj
           rm -f ios/Runner.xcodeproj/project.pbxproj.bak
       - name: Inject GoogleService-Info.plist
         script: |
@@ -118,7 +119,7 @@ workflows:
           python3 scripts/ensure_google_service_plist.py \
             ios/Runner.xcodeproj/project.pbxproj \
             ios/Runner/GoogleService-Info.plist \
-            novadev.Satelital
+            "${IOS_BUNDLE_IDENTIFIER}"
       - name: Apply provisioning profiles
         script: |
           xcode-project use-profiles
@@ -129,7 +130,7 @@ workflows:
           echo "== Provisioning profiles =="
           ls -lah ~/Library/MobileDevice/Provisioning\ Profiles || true
           echo "== Profiles match bundle id =="
-          grep -R "novadev.Satelital" ~/Library/MobileDevice/Provisioning\ Profiles 2>/dev/null | head -n 20 || true
+          grep -R "${IOS_BUNDLE_IDENTIFIER}" ~/Library/MobileDevice/Provisioning\ Profiles 2>/dev/null | head -n 20 || true
       - name: Install dependencies
         script: |
           flutter pub get
@@ -171,7 +172,7 @@ workflows:
             if [ -n "$ARCHIVE_PATH" ]; then
               PROFILE_PATH="$(find ~/Library/MobileDevice/Provisioning\ Profiles -type f -name "*.mobileprovision" | head -n 1)"
               if [ -z "$PROFILE_PATH" ]; then
-                echo "ERROR: Provisioning profile for novadev.Satelital not found in runner."
+                echo "ERROR: Provisioning profile for ${IOS_BUNDLE_IDENTIFIER} not found in runner."
                 ls -lah ~/Library/MobileDevice/Provisioning\ Profiles || true
                 exit 70
               fi
@@ -183,8 +184,9 @@ workflows:
               echo "Using profile app id: $PROFILE_APP_ID"
               echo "Using profile UUID: $PROFILE_UUID"
               echo "Using profile Name: $PROFILE_NAME"
-              if [[ "$PROFILE_APP_ID" != "9JJHM44432.novadev.Satelital" ]]; then
-                echo "ERROR: Profile does not match expected app id 9JJHM44432.novadev.Satelital"
+              EXPECTED_PROFILE_APP_ID="${APPLE_TEAM_ID}.${IOS_BUNDLE_IDENTIFIER}"
+              if [[ "$PROFILE_APP_ID" != "$EXPECTED_PROFILE_APP_ID" ]]; then
+                echo "ERROR: Profile does not match expected app id $EXPECTED_PROFILE_APP_ID"
                 exit 70
               fi
               if [ -z "$PROFILE_UUID" ]; then
@@ -208,7 +210,7 @@ workflows:
               <string>${APPLE_TEAM_ID}</string>
               <key>provisioningProfiles</key>
               <dict>
-                <key>novadev.Satelital</key>
+                <key>${IOS_BUNDLE_IDENTIFIER}</key>
                 <string>${PROFILE_NAME}</string>
               </dict>
               <key>destination</key>
@@ -280,6 +282,7 @@ workflows:
         APP_DISPLAY_NAME: "Satelitrack GPS"
         APP_STORE_VERSION: "1.2.0"
         APPLE_TEAM_ID: "9JJHM44432"
+        IOS_BUNDLE_IDENTIFIER: "novadev.Satelital"
       ios_signing:
         distribution_type: ad_hoc
         bundle_identifier: novadev.Satelital
@@ -361,7 +364,7 @@ workflows:
           fi
       - name: Force bundle identifier
         script: |
-          sed -i.bak 's/PRODUCT_BUNDLE_IDENTIFIER = [^;]*;/PRODUCT_BUNDLE_IDENTIFIER = novadev.Satelital;/g' ios/Runner.xcodeproj/project.pbxproj
+          sed -i.bak "s/PRODUCT_BUNDLE_IDENTIFIER = [^;]*;/PRODUCT_BUNDLE_IDENTIFIER = ${IOS_BUNDLE_IDENTIFIER};/g" ios/Runner.xcodeproj/project.pbxproj
           rm -f ios/Runner.xcodeproj/project.pbxproj.bak
       - name: Inject GoogleService-Info.plist
         script: |
@@ -379,7 +382,7 @@ workflows:
           python3 scripts/ensure_google_service_plist.py \
             ios/Runner.xcodeproj/project.pbxproj \
             ios/Runner/GoogleService-Info.plist \
-            novadev.Satelital
+            "${IOS_BUNDLE_IDENTIFIER}"
       - name: Apply provisioning profiles
         script: |
           xcode-project use-profiles
@@ -390,7 +393,7 @@ workflows:
           echo "== Provisioning profiles =="
           ls -lah ~/Library/MobileDevice/Provisioning\ Profiles || true
           echo "== Profiles match bundle id =="
-          grep -R "novadev.Satelital" ~/Library/MobileDevice/Provisioning\ Profiles 2>/dev/null | head -n 20 || true
+          grep -R "${IOS_BUNDLE_IDENTIFIER}" ~/Library/MobileDevice/Provisioning\ Profiles 2>/dev/null | head -n 20 || true
       - name: Install dependencies
         script: |
           flutter pub get
@@ -432,7 +435,7 @@ workflows:
             if [ -n "$ARCHIVE_PATH" ]; then
               PROFILE_PATH="$(find ~/Library/MobileDevice/Provisioning\ Profiles -type f -name "*.mobileprovision" | head -n 1)"
               if [ -z "$PROFILE_PATH" ]; then
-                echo "ERROR: Provisioning profile for novadev.Satelital not found in runner."
+                echo "ERROR: Provisioning profile for ${IOS_BUNDLE_IDENTIFIER} not found in runner."
                 ls -lah ~/Library/MobileDevice/Provisioning\ Profiles || true
                 exit 70
               fi
@@ -444,8 +447,9 @@ workflows:
               echo "Using profile app id: $PROFILE_APP_ID"
               echo "Using profile UUID: $PROFILE_UUID"
               echo "Using profile Name: $PROFILE_NAME"
-              if [[ "$PROFILE_APP_ID" != "9JJHM44432.novadev.Satelital" ]]; then
-                echo "ERROR: Profile does not match expected app id 9JJHM44432.novadev.Satelital"
+              EXPECTED_PROFILE_APP_ID="${APPLE_TEAM_ID}.${IOS_BUNDLE_IDENTIFIER}"
+              if [[ "$PROFILE_APP_ID" != "$EXPECTED_PROFILE_APP_ID" ]]; then
+                echo "ERROR: Profile does not match expected app id $EXPECTED_PROFILE_APP_ID"
                 exit 70
               fi
               if [ -z "$PROFILE_UUID" ]; then
@@ -469,7 +473,7 @@ workflows:
               <string>${APPLE_TEAM_ID}</string>
               <key>provisioningProfiles</key>
               <dict>
-                <key>novadev.Satelital</key>
+                <key>${IOS_BUNDLE_IDENTIFIER}</key>
                 <string>${PROFILE_NAME}</string>
               </dict>
               <key>destination</key>
