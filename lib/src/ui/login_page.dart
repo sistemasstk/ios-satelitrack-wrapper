@@ -22,6 +22,14 @@ class _LoginPageState extends State<LoginPage> {
   bool _showPassword = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.controller.preloadPushDebug();
+    });
+  }
+
+  @override
   void dispose() {
     _userController.dispose();
     _passwordController.dispose();
@@ -106,7 +114,8 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                             ),
                           ],
-                          if ((controller.pushDebugInfo ?? '').isNotEmpty) ...<Widget>[
+                          if (controller.loadingPushDebug ||
+                              (controller.pushDebugInfo ?? '').isNotEmpty) ...<Widget>[
                             const SizedBox(height: 12),
                             Container(
                               padding: const EdgeInsets.all(12),
@@ -128,7 +137,7 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                                   const SizedBox(height: 8),
                                   SelectableText(
-                                    controller.pushDebugInfo!,
+                                    controller.pushDebugInfo ?? 'Solicitando token push temporal...',
                                     style: const TextStyle(
                                       fontSize: 11,
                                       height: 1.35,

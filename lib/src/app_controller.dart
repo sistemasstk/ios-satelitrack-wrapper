@@ -24,6 +24,7 @@ class AppController extends ChangeNotifier {
   bool bootstrapping = true;
   bool loggingIn = false;
   bool loadingDashboard = false;
+  bool loadingPushDebug = false;
 
   UserSession? session;
   MobileModuleAccess? moduleAccess;
@@ -206,6 +207,32 @@ class AppController extends ChangeNotifier {
     await _backendClient.logout();
     await _clearLocalSession();
     notifyListeners();
+  }
+
+  Future<void> preloadPushDebug() async {
+    if (loadingPushDebug) {
+      return;
+    }
+
+    loadingPushDebug = true;
+    pushDebugInfo = 'Solicitando token push temporal...';
+    notifyListeners();
+
+    try {
+      TokenResult tokenResult;
+      try {
+        tokenResult = await _notificationService.resolveToken();
+      } catch (_) {
+        tokenResult = _notificationService.emptyTokenResult();
+      }
+      _recordPushDebug(
+        origin: 'preview',
+        tokenResult: tokenResult,
+      );
+    } finally {
+      loadingPushDebug = false;
+      notifyListeners();
+    }
   }
 
   bool isModuleEnabled(String moduleKey, {bool fallback = false}) {
@@ -586,6 +613,7 @@ class AppController extends ChangeNotifier {
     vehiclesCount = 0;
     positions = const <VehiclePosition>[];
     errorMessage = null;
+    loadingPushDebug = false;
     pushDebugInfo = null;
     _backendClient.clearSession();
     await _sessionStore.clear();
