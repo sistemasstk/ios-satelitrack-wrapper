@@ -29,6 +29,32 @@ workflows:
           if [ ! -d ios/Runner.xcodeproj ]; then
             flutter create --platforms=ios --org novadev --project-name ios_satelitrack_wrapper .
           fi
+      - name: Ensure APNs registration in AppDelegate
+        script: |
+          APP_DELEGATE="ios/Runner/AppDelegate.swift"
+          if [ ! -f "$APP_DELEGATE" ]; then
+            echo "WARN: AppDelegate.swift no encontrado en $APP_DELEGATE"
+            exit 0
+          fi
+          if grep -q "registerForRemoteNotifications" "$APP_DELEGATE"; then
+            echo "AppDelegate ya solicita registro remoto APNs"
+            exit 0
+          fi
+          python3 - "$APP_DELEGATE" <<'PY'
+          import pathlib
+          import sys
+
+          path = pathlib.Path(sys.argv[1])
+          content = path.read_text()
+          needle = "GeneratedPluginRegistrant.register(with: self)\n"
+          replacement = needle + "    application.registerForRemoteNotifications()\n"
+
+          if needle not in content:
+              raise SystemExit("ERROR: no fue posible localizar GeneratedPluginRegistrant en AppDelegate.swift")
+
+          path.write_text(content.replace(needle, replacement, 1))
+          print("AppDelegate actualizado para registrar APNs")
+          PY
       - name: Enable iOS push capabilities
         script: |
           INFO_PLIST="ios/Runner/Info.plist"
@@ -123,6 +149,14 @@ workflows:
       - name: Apply provisioning profiles
         script: |
           xcode-project use-profiles
+      - name: Verify push entitlements in project
+        script: |
+          echo "== Runner entitlements =="
+          cat ios/Runner/Runner.entitlements || true
+          echo "== CODE_SIGN_ENTITLEMENTS in project =="
+          grep -n "CODE_SIGN_ENTITLEMENTS" ios/Runner.xcodeproj/project.pbxproj || true
+          echo "== aps-environment references =="
+          grep -n "aps-environment" ios/Runner/Runner.entitlements ios/Runner.xcodeproj/project.pbxproj || true
       - name: Debug signing assets
         script: |
           echo "== Code signing identities =="
@@ -235,6 +269,19 @@ workflows:
           ls -lah build/ios/ipa || true
           echo "== Find IPA files =="
           find build -type f -name "*.ipa" -print || true
+          echo "== Inspect archive entitlements =="
+          ARCHIVE_PATH="$(find build -type d -name "Runner.xcarchive" | head -n 1)"
+          if [ -n "$ARCHIVE_PATH" ]; then
+            APP_PATH="$ARCHIVE_PATH/Products/Applications/Runner.app"
+            if [ -f "$APP_PATH/embedded.mobileprovision" ]; then
+              security cms -D -i "$APP_PATH/embedded.mobileprovision" > /tmp/embedded_profile.plist || true
+              /usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /tmp/embedded_profile.plist || true
+              /usr/libexec/PlistBuddy -c "Print :Entitlements:aps-environment" /tmp/embedded_profile.plist || true
+            fi
+            codesign -d --entitlements :- "$APP_PATH" > /tmp/app_entitlements.plist 2>/tmp/codesign_entitlements.log || true
+            cat /tmp/app_entitlements.plist || true
+            cat /tmp/codesign_entitlements.log || true
+          fi
           echo "== Find xcode logs =="
           find /tmp/xcodebuild_logs -type f -maxdepth 2 -print || true
       - name: Collect artifacts
@@ -292,6 +339,32 @@ workflows:
           if [ ! -d ios/Runner.xcodeproj ]; then
             flutter create --platforms=ios --org novadev --project-name ios_satelitrack_wrapper .
           fi
+      - name: Ensure APNs registration in AppDelegate
+        script: |
+          APP_DELEGATE="ios/Runner/AppDelegate.swift"
+          if [ ! -f "$APP_DELEGATE" ]; then
+            echo "WARN: AppDelegate.swift no encontrado en $APP_DELEGATE"
+            exit 0
+          fi
+          if grep -q "registerForRemoteNotifications" "$APP_DELEGATE"; then
+            echo "AppDelegate ya solicita registro remoto APNs"
+            exit 0
+          fi
+          python3 - "$APP_DELEGATE" <<'PY'
+          import pathlib
+          import sys
+
+          path = pathlib.Path(sys.argv[1])
+          content = path.read_text()
+          needle = "GeneratedPluginRegistrant.register(with: self)\n"
+          replacement = needle + "    application.registerForRemoteNotifications()\n"
+
+          if needle not in content:
+              raise SystemExit("ERROR: no fue posible localizar GeneratedPluginRegistrant en AppDelegate.swift")
+
+          path.write_text(content.replace(needle, replacement, 1))
+          print("AppDelegate actualizado para registrar APNs")
+          PY
       - name: Enable iOS push capabilities
         script: |
           INFO_PLIST="ios/Runner/Info.plist"
@@ -386,6 +459,14 @@ workflows:
       - name: Apply provisioning profiles
         script: |
           xcode-project use-profiles
+      - name: Verify push entitlements in project
+        script: |
+          echo "== Runner entitlements =="
+          cat ios/Runner/Runner.entitlements || true
+          echo "== CODE_SIGN_ENTITLEMENTS in project =="
+          grep -n "CODE_SIGN_ENTITLEMENTS" ios/Runner.xcodeproj/project.pbxproj || true
+          echo "== aps-environment references =="
+          grep -n "aps-environment" ios/Runner/Runner.entitlements ios/Runner.xcodeproj/project.pbxproj || true
       - name: Debug signing assets
         script: |
           echo "== Code signing identities =="
@@ -498,6 +579,19 @@ workflows:
           ls -lah build/ios/ipa || true
           echo "== Find IPA files =="
           find build -type f -name "*.ipa" -print || true
+          echo "== Inspect archive entitlements =="
+          ARCHIVE_PATH="$(find build -type d -name "Runner.xcarchive" | head -n 1)"
+          if [ -n "$ARCHIVE_PATH" ]; then
+            APP_PATH="$ARCHIVE_PATH/Products/Applications/Runner.app"
+            if [ -f "$APP_PATH/embedded.mobileprovision" ]; then
+              security cms -D -i "$APP_PATH/embedded.mobileprovision" > /tmp/embedded_profile.plist || true
+              /usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /tmp/embedded_profile.plist || true
+              /usr/libexec/PlistBuddy -c "Print :Entitlements:aps-environment" /tmp/embedded_profile.plist || true
+            fi
+            codesign -d --entitlements :- "$APP_PATH" > /tmp/app_entitlements.plist 2>/tmp/codesign_entitlements.log || true
+            cat /tmp/app_entitlements.plist || true
+            cat /tmp/codesign_entitlements.log || true
+          fi
           echo "== Find xcode logs =="
           find /tmp/xcodebuild_logs -type f -maxdepth 2 -print || true
       - name: Collect artifacts
