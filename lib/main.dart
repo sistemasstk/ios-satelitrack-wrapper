@@ -22,19 +22,41 @@ Future<void> _backgroundMessageHandler(RemoteMessage message) async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  bool firebaseReady = false;
+  String? firebaseBootstrapError;
 
   try {
     await Firebase.initializeApp();
+    await FirebaseMessaging.instance.setAutoInitEnabled(true);
+    await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
     FirebaseMessaging.onBackgroundMessage(_backgroundMessageHandler);
-  } catch (_) {
-    // App can run without Firebase during early setup.
+    firebaseReady = true;
+  } catch (ex) {
+    // App can still run, but push notifications will stay unavailable.
+    firebaseBootstrapError = ex.toString();
   }
 
-  runApp(const SatelitrackNativeApp());
+  runApp(
+    SatelitrackNativeApp(
+      firebaseReady: firebaseReady,
+      firebaseBootstrapError: firebaseBootstrapError,
+    ),
+  );
 }
 
 class SatelitrackNativeApp extends StatefulWidget {
-  const SatelitrackNativeApp({super.key});
+  const SatelitrackNativeApp({
+    super.key,
+    required this.firebaseReady,
+    this.firebaseBootstrapError,
+  });
+
+  final bool firebaseReady;
+  final String? firebaseBootstrapError;
 
   @override
   State<SatelitrackNativeApp> createState() => _SatelitrackNativeAppState();
@@ -49,7 +71,10 @@ class _SatelitrackNativeAppState extends State<SatelitrackNativeApp> {
     _controller = AppController(
       backendClient: BackendClient(),
       sessionStore: SessionStore(),
-      notificationService: NotificationTokenService(),
+      notificationService: NotificationTokenService(
+        firebaseReady: widget.firebaseReady,
+        bootstrapError: widget.firebaseBootstrapError,
+      ),
     );
     unawaited(_controller.bootstrap());
   }

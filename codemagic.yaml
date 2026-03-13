@@ -102,16 +102,23 @@ workflows:
         script: |
           sed -i.bak 's/PRODUCT_BUNDLE_IDENTIFIER = [^;]*;/PRODUCT_BUNDLE_IDENTIFIER = novadev.Satelital;/g' ios/Runner.xcodeproj/project.pbxproj
           rm -f ios/Runner.xcodeproj/project.pbxproj.bak
-      - name: Inject GoogleService-Info.plist (optional)
+      - name: Inject GoogleService-Info.plist
         script: |
-          if [ -n "${FIREBASE_IOS_PLIST_BASE64:-}" ] && [ "${FIREBASE_IOS_PLIST_BASE64}" != "null" ]; then
-            if echo "$FIREBASE_IOS_PLIST_BASE64" | tr -d '\n\r' | base64 --decode > ios/Runner/GoogleService-Info.plist; then
-              echo "GoogleService-Info.plist injected from FIREBASE_IOS_PLIST_BASE64"
-            else
-              echo "WARN: FIREBASE_IOS_PLIST_BASE64 is not valid base64; skipping plist injection"
-              rm -f ios/Runner/GoogleService-Info.plist
-            fi
+          if [ -z "${FIREBASE_IOS_PLIST_BASE64:-}" ] || [ "${FIREBASE_IOS_PLIST_BASE64}" = "null" ]; then
+            echo "ERROR: FIREBASE_IOS_PLIST_BASE64 es obligatoria para notificaciones iOS."
+            exit 1
           fi
+          if echo "$FIREBASE_IOS_PLIST_BASE64" | tr -d '\n\r' | base64 --decode > ios/Runner/GoogleService-Info.plist; then
+            echo "GoogleService-Info.plist injected from FIREBASE_IOS_PLIST_BASE64"
+          else
+            echo "ERROR: FIREBASE_IOS_PLIST_BASE64 no es base64 valido."
+            rm -f ios/Runner/GoogleService-Info.plist
+            exit 1
+          fi
+          python3 scripts/ensure_google_service_plist.py \
+            ios/Runner.xcodeproj/project.pbxproj \
+            ios/Runner/GoogleService-Info.plist \
+            novadev.Satelital
       - name: Apply provisioning profiles
         script: |
           xcode-project use-profiles
@@ -154,6 +161,7 @@ workflows:
           flutter build ipa --release \
             --build-name=$APP_STORE_VERSION \
             --build-number=$SAFE_BUILD_NUMBER \
+            --dart-define=APP_DISPLAY_NAME=$APP_DISPLAY_NAME \
             --dart-define=APP_BASE_URL=$APP_BASE_URL \
             --dart-define=APP_VERSION=$APP_VERSION
       - name: Export IPA from archive if missing
@@ -355,16 +363,23 @@ workflows:
         script: |
           sed -i.bak 's/PRODUCT_BUNDLE_IDENTIFIER = [^;]*;/PRODUCT_BUNDLE_IDENTIFIER = novadev.Satelital;/g' ios/Runner.xcodeproj/project.pbxproj
           rm -f ios/Runner.xcodeproj/project.pbxproj.bak
-      - name: Inject GoogleService-Info.plist (optional)
+      - name: Inject GoogleService-Info.plist
         script: |
-          if [ -n "${FIREBASE_IOS_PLIST_BASE64:-}" ] && [ "${FIREBASE_IOS_PLIST_BASE64}" != "null" ]; then
-            if echo "$FIREBASE_IOS_PLIST_BASE64" | tr -d '\n\r' | base64 --decode > ios/Runner/GoogleService-Info.plist; then
-              echo "GoogleService-Info.plist injected from FIREBASE_IOS_PLIST_BASE64"
-            else
-              echo "WARN: FIREBASE_IOS_PLIST_BASE64 is not valid base64; skipping plist injection"
-              rm -f ios/Runner/GoogleService-Info.plist
-            fi
+          if [ -z "${FIREBASE_IOS_PLIST_BASE64:-}" ] || [ "${FIREBASE_IOS_PLIST_BASE64}" = "null" ]; then
+            echo "ERROR: FIREBASE_IOS_PLIST_BASE64 es obligatoria para notificaciones iOS."
+            exit 1
           fi
+          if echo "$FIREBASE_IOS_PLIST_BASE64" | tr -d '\n\r' | base64 --decode > ios/Runner/GoogleService-Info.plist; then
+            echo "GoogleService-Info.plist injected from FIREBASE_IOS_PLIST_BASE64"
+          else
+            echo "ERROR: FIREBASE_IOS_PLIST_BASE64 no es base64 valido."
+            rm -f ios/Runner/GoogleService-Info.plist
+            exit 1
+          fi
+          python3 scripts/ensure_google_service_plist.py \
+            ios/Runner.xcodeproj/project.pbxproj \
+            ios/Runner/GoogleService-Info.plist \
+            novadev.Satelital
       - name: Apply provisioning profiles
         script: |
           xcode-project use-profiles
@@ -407,6 +422,7 @@ workflows:
           flutter build ipa --release \
             --build-name=$APP_STORE_VERSION \
             --build-number=$SAFE_BUILD_NUMBER \
+            --dart-define=APP_DISPLAY_NAME=$APP_DISPLAY_NAME \
             --dart-define=APP_BASE_URL=$APP_BASE_URL \
             --dart-define=APP_VERSION=$APP_VERSION
       - name: Export IPA from archive if missing

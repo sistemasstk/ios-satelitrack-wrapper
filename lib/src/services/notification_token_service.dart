@@ -3,7 +3,37 @@ import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 class NotificationTokenService {
+  NotificationTokenService({
+    this.firebaseReady = true,
+    this.bootstrapError,
+  });
+
+  final bool firebaseReady;
+  final String? bootstrapError;
+
+  TokenResult emptyTokenResult() {
+    return TokenResult.empty(platform: _platformName());
+  }
+
+  String? get diagnosticMessage {
+    if (firebaseReady) {
+      return null;
+    }
+
+    final String raw = (bootstrapError ?? '').toLowerCase();
+    if (raw.contains('google-service-info') || raw.contains('configuration file')) {
+      return 'Notificaciones iOS no disponibles: falta la configuracion de Firebase en la compilacion.';
+    }
+    if (raw.contains('apns') || raw.contains('push')) {
+      return 'Notificaciones iOS no disponibles: revisa capacidades Push/APNs en la compilacion.';
+    }
+    return 'Notificaciones iOS no disponibles en esta compilacion.';
+  }
+
   Stream<TokenResult> tokenRefreshStream() {
+    if (!firebaseReady) {
+      return const Stream<TokenResult>.empty();
+    }
     return FirebaseMessaging.instance.onTokenRefresh.map(
       (String token) => TokenResult(
         token: token.trim().isEmpty ? 'vacio' : token.trim(),
@@ -14,9 +44,14 @@ class NotificationTokenService {
   }
 
   Future<TokenResult> resolveToken() async {
-    final FirebaseMessaging messaging = FirebaseMessaging.instance;
+    if (!firebaseReady) {
+      return emptyTokenResult();
+    }
+
+    late final FirebaseMessaging messaging;
 
     try {
+      messaging = FirebaseMessaging.instance;
       final NotificationSettings settings = await messaging.requestPermission(
         alert: true,
         badge: true,
@@ -25,10 +60,10 @@ class NotificationTokenService {
       );
 
       if (settings.authorizationStatus == AuthorizationStatus.denied) {
-        return TokenResult.empty(platform: _platformName());
+        return emptyTokenResult();
       }
     } catch (_) {
-      return TokenResult.empty(platform: _platformName());
+      return emptyTokenResult();
     }
 
     String? apnsToken;
@@ -74,7 +109,7 @@ class NotificationTokenService {
       await Future<void>.delayed(const Duration(milliseconds: 400));
     }
 
-    return TokenResult.empty(platform: _platformName());
+    return emptyTokenResult();
   }
 
   String _platformName() {

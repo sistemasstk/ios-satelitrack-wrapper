@@ -32,6 +32,7 @@ class AppController extends ChangeNotifier {
   String? errorMessage;
 
   bool get isAuthenticated => session != null;
+  String? get notificationSetupWarning => _notificationService.diagnosticMessage;
 
   Future<void> bootstrap() async {
     _ensureTokenRefreshListener();
@@ -76,7 +77,13 @@ class AppController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final TokenResult tokenResult = await _notificationService.resolveToken();
+      TokenResult tokenResult;
+      try {
+        tokenResult = await _notificationService.resolveToken();
+      } catch (_) {
+        tokenResult = _notificationService.emptyTokenResult();
+      }
+
       final LoginResult result = await _backendClient.login(
         username: username,
         password: password,
@@ -145,11 +152,11 @@ class AppController extends ChangeNotifier {
       errorMessage = ex.message;
       notifyListeners();
       return LoginResult(success: false, message: ex.message);
-    } catch (_) {
+    } catch (ex) {
       loggingIn = false;
-      errorMessage = 'No fue posible iniciar sesion.';
+      errorMessage = _unexpectedLoginErrorMessage(ex);
       notifyListeners();
-      return const LoginResult(success: false, message: 'No fue posible iniciar sesion.');
+      return LoginResult(success: false, message: errorMessage!);
     }
   }
 
@@ -571,6 +578,22 @@ class AppController extends ChangeNotifier {
     errorMessage = null;
     _backendClient.clearSession();
     await _sessionStore.clear();
+  }
+
+  String _unexpectedLoginErrorMessage(Object error) {
+    final String raw = error.toString().toLowerCase();
+    if (raw.contains('missingpluginexception') ||
+        raw.contains('platformexception') ||
+        raw.contains('channel-error')) {
+      return 'La version instalada no inicializo correctamente los servicios moviles.';
+    }
+    if (raw.contains('firebase')) {
+      return 'La integracion de notificaciones aun no esta lista en esta compilacion.';
+    }
+    if (raw.contains('sharedpreferences')) {
+      return 'No fue posible guardar la sesion en el dispositivo.';
+    }
+    return 'No fue posible iniciar sesion. Error inesperado: ${error.runtimeType}.';
   }
 
   @override

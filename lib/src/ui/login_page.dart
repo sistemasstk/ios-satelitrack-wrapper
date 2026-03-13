@@ -88,6 +88,24 @@ class _LoginPageState extends State<LoginPage> {
                               color: Colors.blueGrey.shade700,
                             ),
                           ),
+                          if ((controller.notificationSetupWarning ?? '').isNotEmpty) ...<Widget>[
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xfffff7e8),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xffecd7a3)),
+                              ),
+                              child: Text(
+                                controller.notificationSetupWarning!,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xff7a5a00),
+                                ),
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 22),
                           DropdownButtonFormField<int>(
                             value: _userType,
