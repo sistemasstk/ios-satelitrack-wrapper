@@ -106,6 +106,39 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                             ),
                           ],
+                          if ((controller.pushDebugInfo ?? '').isNotEmpty) ...<Widget>[
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xfff3f7f4),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xffc7d7cc)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  const Text(
+                                    'Debug token (temporal)',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppPalette.deepGreen,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  SelectableText(
+                                    controller.pushDebugInfo!,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      height: 1.35,
+                                      color: Color(0xff274033),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 22),
                           DropdownButtonFormField<int>(
                             value: _userType,

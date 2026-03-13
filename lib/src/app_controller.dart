@@ -30,6 +30,7 @@ class AppController extends ChangeNotifier {
   int vehiclesCount = 0;
   List<VehiclePosition> positions = const <VehiclePosition>[];
   String? errorMessage;
+  String? pushDebugInfo;
 
   bool get isAuthenticated => session != null;
   String? get notificationSetupWarning => _notificationService.diagnosticMessage;
@@ -74,6 +75,7 @@ class AppController extends ChangeNotifier {
     _ensureTokenRefreshListener();
     loggingIn = true;
     errorMessage = null;
+    pushDebugInfo = null;
     notifyListeners();
 
     try {
@@ -83,6 +85,10 @@ class AppController extends ChangeNotifier {
       } catch (_) {
         tokenResult = _notificationService.emptyTokenResult();
       }
+      _recordPushDebug(
+        origin: 'login',
+        tokenResult: tokenResult,
+      );
 
       final LoginResult result = await _backendClient.login(
         username: username,
@@ -531,6 +537,10 @@ class AppController extends ChangeNotifier {
       }
 
       try {
+        _recordPushDebug(
+          origin: 'sync',
+          tokenResult: tokenResult,
+        );
         final ActionResult result = await _backendClient.registerNotificationToken(
           tokenId: token,
           tokenProvider: tokenResult.provider,
@@ -576,8 +586,30 @@ class AppController extends ChangeNotifier {
     vehiclesCount = 0;
     positions = const <VehiclePosition>[];
     errorMessage = null;
+    pushDebugInfo = null;
     _backendClient.clearSession();
     await _sessionStore.clear();
+  }
+
+  void _recordPushDebug({
+    required String origin,
+    required TokenResult tokenResult,
+  }) {
+    final String token = tokenResult.token.trim();
+    final String safeToken = token.isEmpty ? 'vacio' : token;
+    final int tokenLength = token == 'vacio' ? 0 : token.length;
+    pushDebugInfo = [
+      'Diagnostico push temporal',
+      'Origen: $origin',
+      'Firebase listo: ${notificationSetupWarning == null ? 'si' : 'no'}',
+      'Provider: ${tokenResult.provider}',
+      'Platform: ${tokenResult.platform}',
+      'Longitud token: $tokenLength',
+      'Token: $safeToken',
+      if ((notificationSetupWarning ?? '').isNotEmpty) 'Aviso: ${notificationSetupWarning!}',
+    ].join('\n');
+    debugPrint('PUSH_DEBUG[$origin] provider=${tokenResult.provider} '
+        'platform=${tokenResult.platform} len=$tokenLength token=$safeToken');
   }
 
   String _unexpectedLoginErrorMessage(Object error) {
