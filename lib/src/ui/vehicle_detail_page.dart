@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../app_controller.dart';
 import '../models/domain_models.dart';
+import '../theme/app_palette.dart';
 import 'commands_page.dart';
 
 class VehicleDetailPage extends StatefulWidget {
@@ -150,7 +151,7 @@ class _VehicleDetailPageState extends State<VehicleDetailPage> {
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: const Color(0xffcfd8e3)),
+                                  border: Border.all(color: AppPalette.borderSoft),
                                 ),
                                 child: Text(
                                   _item.plate,
@@ -183,7 +184,7 @@ class _VehicleDetailPageState extends State<VehicleDetailPage> {
                     spacing: 8,
                     runSpacing: 8,
                     children: <Widget>[
-                      _DataBadge(label: 'Fecha', value: _item.reportDate),
+                      _DataBadge(label: 'Fecha', value: formatBackendDateTime(_item.reportDate)),
                       _DataBadge(label: 'Ign', value: _item.ignitionLabel),
                       _DataBadge(label: 'Velocidad', value: _item.speed),
                       _DataBadge(label: 'Km dia', value: _item.kmDay),

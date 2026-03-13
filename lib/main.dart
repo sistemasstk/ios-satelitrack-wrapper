@@ -8,6 +8,7 @@ import 'src/app_controller.dart';
 import 'src/services/backend_client.dart';
 import 'src/services/notification_token_service.dart';
 import 'src/services/session_store.dart';
+import 'src/theme/app_palette.dart';
 import 'src/ui/dashboard_page.dart';
 import 'src/ui/login_page.dart';
 
@@ -67,8 +68,31 @@ class _SatelitrackNativeAppState extends State<SatelitrackNativeApp> {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff0d47a1)),
-            appBarTheme: const AppBarTheme(centerTitle: false),
+            useMaterial3: true,
+            colorScheme: ColorScheme.fromSeed(seedColor: AppPalette.seed),
+            scaffoldBackgroundColor: AppPalette.appBackground,
+            appBarTheme: const AppBarTheme(
+              centerTitle: false,
+              backgroundColor: Colors.white,
+              foregroundColor: AppPalette.deepGreen,
+              surfaceTintColor: Colors.white,
+            ),
+            inputDecorationTheme: InputDecorationTheme(
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppPalette.borderSoft),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppPalette.borderSoft),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppPalette.seed, width: 1.4),
+              ),
+            ),
           ),
           home: _buildHome(),
         );
@@ -92,15 +116,20 @@ class _BootstrapPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Colors.white,
+    return Scaffold(
+      backgroundColor: AppPalette.appBackground,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            CircularProgressIndicator(),
+          children: const <Widget>[
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(AppPalette.seed),
+            ),
             SizedBox(height: 12),
-            Text('Cargando aplicacion...'),
+            Text(
+              'Cargando aplicacion...',
+              style: TextStyle(color: AppPalette.deepGreen),
+            ),
           ],
         ),
       ),

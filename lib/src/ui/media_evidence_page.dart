@@ -6,6 +6,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../app_controller.dart';
 import '../config/app_config.dart';
 import '../models/domain_models.dart';
+import 'location_map_page.dart';
+import 'travel_playback_page.dart';
 
 enum _ReportType {
   history,
@@ -98,17 +100,38 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
     setState(() => _to = DateTime(picked.year, picked.month, picked.day, 23, 59, 59));
   }
 
-  Future<void> _loadMedia() async {
+  String _selectedVehiclePlate() {
+    final int? idMovil = _selectedVehicleId;
+    if (idMovil == null) {
+      return 'Vehiculo';
+    }
+    for (final VehicleRef vehicle in _vehicles) {
+      if (vehicle.idMovil == idMovil) {
+        return vehicle.plate;
+      }
+    }
+    return 'Vehiculo';
+  }
+
+  bool _validateFilters() {
     final int? idMovil = _selectedVehicleId;
     if (idMovil == null) {
       _showMessage('Selecciona un vehiculo.');
-      return;
+      return false;
     }
     if (_from.isAfter(_to)) {
       _showMessage('La fecha inicial no puede ser mayor a la fecha final.');
+      return false;
+    }
+    return true;
+  }
+
+  Future<void> _runReport({bool autoplay = false}) async {
+    if (!_validateFilters()) {
       return;
     }
 
+    final int idMovil = _selectedVehicleId!;
     setState(() {
       _loadingMedia = true;
       _error = null;
@@ -127,6 +150,13 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
           return;
         }
         setState(() => _historyItems = items);
+        if (autoplay) {
+          if (items.isEmpty) {
+            _showMessage('No hay puntos para simular en el rango consultado.');
+          } else {
+            _openHistoryPlayback(points: items, autoplay: true);
+          }
+        }
       } else if (_reportType == _ReportType.evidence) {
         final List<MediaEvidence> items = await widget.controller.loadMediaEvidence(
           idMovil: idMovil,
@@ -158,6 +188,59 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
         setState(() => _loadingMedia = false);
       }
     }
+  }
+
+  void _openHistoryPlayback({
+    required List<TravelHistoryItem> points,
+    bool autoplay = false,
+    int initialIndex = 0,
+  }) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => TravelPlaybackPage(
+          plate: _selectedVehiclePlate(),
+          points: points,
+          initialIndex: initialIndex,
+          autoplay: autoplay,
+          title: autoplay ? 'Simulacion de recorrido' : 'Recorrido en mapa',
+        ),
+      ),
+    );
+  }
+
+  void _openHistoryLocation(TravelHistoryItem item) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => LocationMapPage(
+          title: _selectedVehiclePlate(),
+          subtitle: item.position,
+          latitude: item.latitude,
+          longitude: item.longitude,
+          badges: <String>[
+            formatBackendDateTime(item.gpsDate),
+            'Velocidad ${item.speed} km/h',
+            'Ignicion ${item.ignition}',
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openEvidenceLocation(MediaEvidence item) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => LocationMapPage(
+          title: item.name.isEmpty ? 'Evidencia ${item.id}' : item.name,
+          subtitle: item.position,
+          latitude: item.latitude,
+          longitude: item.longitude,
+          badges: <String>[
+            formatBackendDateTime(item.endDate),
+            item.isVideo ? 'Video' : 'Foto',
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _openExternalUrl(String url) async {
@@ -269,7 +352,10 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
                           .toList(),
                       onChanged: _loadingVehicles || _loadingMedia
                           ? null
-                          : (int? value) => setState(() => _selectedVehicleId = value),
+                          : (int? value) {
+                              FocusScope.of(context).unfocus();
+                              setState(() => _selectedVehicleId = value);
+                            },
                     ),
                     const SizedBox(height: 8),
                     Row(
@@ -292,14 +378,35 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: _loadingMedia ? null : _loadMedia,
-                        icon: const Icon(Icons.search),
-                        label: const Text('Consultar historial'),
+                    if (_reportType == _ReportType.history)
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: FilledButton.icon(
+                              onPressed: _loadingMedia ? null : () => _runReport(),
+                              icon: const Icon(Icons.table_rows_outlined),
+                              label: const Text('Ver reporte'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _loadingMedia ? null : () => _runReport(autoplay: true),
+                              icon: const Icon(Icons.play_circle_outline),
+                              label: const Text('Simular ruta'),
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: _loadingMedia ? null : () => _runReport(),
+                          icon: const Icon(Icons.search),
+                          label: const Text('Consultar informe'),
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -354,8 +461,9 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
           return Card(
             margin: const EdgeInsets.only(bottom: 10),
             child: ListTile(
+              onTap: item.hasCoordinate ? () => _openHistoryLocation(item) : null,
               leading: const Icon(Icons.alt_route),
-              title: Text(item.gpsDate),
+              title: Text(formatBackendDateTime(item.gpsDate)),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -368,10 +476,8 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
               ),
               trailing: item.hasCoordinate
                   ? IconButton(
-                      tooltip: 'Ver mapa',
-                      onPressed: () => _openExternalUrl(
-                        'https://www.openstreetmap.org/?mlat=${item.latitude}&mlon=${item.longitude}#map=16/${item.latitude}/${item.longitude}',
-                      ),
+                      tooltip: 'Ver punto en mapa',
+                      onPressed: () => _openHistoryLocation(item),
                       icon: const Icon(Icons.map_outlined),
                     )
                   : null,
@@ -396,7 +502,7 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Text(item.gpsDate),
+                  Text(formatBackendDateTime(item.gpsDate)),
                   Text(item.position, maxLines: 2, overflow: TextOverflow.ellipsis),
                 ],
               ),
@@ -432,7 +538,7 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 4),
-                Text('${item.endDate} - ${item.isVideo ? 'Video' : 'Foto'}'),
+                Text('${formatBackendDateTime(item.endDate)} - ${item.isVideo ? 'Video' : 'Foto'}'),
                 const SizedBox(height: 4),
                 Text(item.position, maxLines: 2, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 8),
@@ -483,9 +589,7 @@ class _MediaEvidencePageState extends State<MediaEvidencePage> {
                   children: <Widget>[
                     if (item.latitude != 0 && item.longitude != 0)
                       OutlinedButton.icon(
-                        onPressed: () => _openExternalUrl(
-                          'https://www.openstreetmap.org/?mlat=${item.latitude}&mlon=${item.longitude}#map=16/${item.latitude}/${item.longitude}',
-                        ),
+                        onPressed: () => _openEvidenceLocation(item),
                         icon: const Icon(Icons.map_outlined),
                         label: const Text('Mapa'),
                       ),

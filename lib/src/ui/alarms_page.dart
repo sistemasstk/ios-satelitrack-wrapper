@@ -298,7 +298,11 @@ class _AlarmsPageState extends State<AlarmsPage> {
           margin: const EdgeInsets.only(bottom: 10),
           child: ListTile(
             title: Text('${alarm.plate} - ${alarm.event}'),
-            subtitle: Text('${alarm.receivedAt}\n${alarm.position}', maxLines: 3, overflow: TextOverflow.ellipsis),
+            subtitle: Text(
+              '${formatBackendDateTime(alarm.receivedAt)}\n${alarm.position}',
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
             isThreeLine: true,
             trailing: FilledButton(
               onPressed: () => _openAttendDialog(alarm),
@@ -409,7 +413,11 @@ class _AlarmsPageState extends State<AlarmsPage> {
           margin: const EdgeInsets.only(bottom: 10),
           child: ListTile(
             title: Text(item.event),
-            subtitle: Text('${item.gpsDate}\n${item.position}', maxLines: 3, overflow: TextOverflow.ellipsis),
+            subtitle: Text(
+              '${formatBackendDateTime(item.gpsDate)}\n${item.position}',
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
             trailing: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[

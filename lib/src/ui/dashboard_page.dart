@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_controller.dart';
 import '../config/app_config.dart';
 import '../models/domain_models.dart';
+import '../theme/app_palette.dart';
 import 'alarms_page.dart';
 import 'checklist_page.dart';
 import 'commands_page.dart';
@@ -116,6 +117,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 28),
       children: <Widget>[
         Card(
@@ -140,6 +142,8 @@ class _DashboardPageState extends State<DashboardPage> {
                         },
                       ),
               ),
+              onTapOutside: (_) => FocusScope.of(context).unfocus(),
+              onSubmitted: (_) => FocusScope.of(context).unfocus(),
               onChanged: (String value) => setState(() => _plateQuery = value),
             ),
           ),
@@ -186,7 +190,7 @@ class _SummaryCard extends StatelessWidget {
     final List<_ActionItem> actions = _buildActions(context);
 
     return Card(
-      color: const Color(0xfff5f9ff),
+      color: AppPalette.softGreenSurface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       margin: const EdgeInsets.only(bottom: 14),
       child: Padding(
@@ -196,19 +200,19 @@ class _SummaryCard extends StatelessWidget {
           children: <Widget>[
             Text(
               username.isEmpty ? 'Sesion activa' : 'Hola, $username',
-              style: const TextStyle(fontSize: 14, color: Color(0xff35507f)),
+              style: const TextStyle(fontSize: 14, color: AppPalette.midGreen),
             ),
             const SizedBox(height: 6),
             Row(
               children: <Widget>[
-                const Icon(Icons.local_shipping_outlined, color: Color(0xff022a73)),
+                const Icon(Icons.local_shipping_outlined, color: AppPalette.deepGreen),
                 const SizedBox(width: 8),
                 Text(
                   '$vehiclesCount vehiculos activos',
                   style: const TextStyle(
                     fontSize: 19,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xff022a73),
+                    color: AppPalette.deepGreen,
                   ),
                 ),
                 if (loading) ...<Widget>[
@@ -453,7 +457,10 @@ class _PositionCard extends StatelessWidget {
                     child: Container(
                       color: freshnessColor,
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      child: Text(item.reportDate, style: const TextStyle(fontSize: 12)),
+                      child: Text(
+                        formatBackendDateTime(item.reportDate),
+                        style: const TextStyle(fontSize: 12),
+                      ),
                     ),
                   ),
                 ],
@@ -471,7 +478,7 @@ class _PositionCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xffeef4ff),
+                      color: AppPalette.chipGreen,
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text('Ign: ${item.ignitionLabel}'),

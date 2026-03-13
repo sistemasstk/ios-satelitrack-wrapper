@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
+import '../theme/app_palette.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key, required this.controller});
@@ -48,7 +49,7 @@ class _LoginPageState extends State<LoginPage> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: <Color>[Color(0xffeef4ff), Color(0xffdce7ff), Color(0xfff7f9fe)],
+            colors: <Color>[Color(0xffeef6f1), Color(0xffd8ebe0), Color(0xfff7faf7)],
           ),
         ),
         child: SafeArea(
@@ -74,7 +75,7 @@ class _LoginPageState extends State<LoginPage> {
                             style: TextStyle(
                               fontSize: 26,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xff022a73),
+                              color: AppPalette.deepGreen,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -110,6 +111,7 @@ class _LoginPageState extends State<LoginPage> {
                           TextFormField(
                             controller: _userController,
                             enabled: !controller.loggingIn,
+                            onTapOutside: (_) => FocusScope.of(context).unfocus(),
                             decoration: const InputDecoration(
                               border: OutlineInputBorder(),
                               labelText: 'Usuario',
@@ -125,6 +127,7 @@ class _LoginPageState extends State<LoginPage> {
                           TextFormField(
                             controller: _passwordController,
                             enabled: !controller.loggingIn,
+                            onTapOutside: (_) => FocusScope.of(context).unfocus(),
                             obscureText: !_showPassword,
                             decoration: InputDecoration(
                               border: const OutlineInputBorder(),

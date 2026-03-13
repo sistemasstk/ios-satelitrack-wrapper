@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../app_controller.dart';
 import '../models/domain_models.dart';
+import '../theme/app_palette.dart';
 import 'vehicle_detail_page.dart';
 
 enum _MapLayerType {
@@ -277,6 +278,8 @@ class _MapPageState extends State<MapPage> {
                             },
                           ),
                   ),
+                  onTapOutside: (_) => FocusScope.of(context).unfocus(),
+                  onSubmitted: (_) => FocusScope.of(context).unfocus(),
                   onChanged: (String value) => setState(() => _plateFilter = value),
                 ),
                 const SizedBox(height: 8),
@@ -290,6 +293,7 @@ class _MapPageState extends State<MapPage> {
                           labelText: 'Buscar placa',
                           isDense: true,
                         ),
+                        onTap: () => FocusScope.of(context).unfocus(),
                         items: filteredPlates
                             .map(
                               (String plate) => DropdownMenuItem<String>(
@@ -299,6 +303,7 @@ class _MapPageState extends State<MapPage> {
                             )
                             .toList(),
                         onChanged: (String? value) {
+                          FocusScope.of(context).unfocus();
                           setState(() {
                             _selectedPlate = value;
                             if (value == null && _followSelectedVehicle) {
@@ -351,6 +356,7 @@ class _MapPageState extends State<MapPage> {
                     initialZoom: 5.8,
                     minZoom: 3,
                     maxZoom: 18,
+                    onTap: (_, __) => FocusScope.of(context).unfocus(),
                   ),
                   children: <Widget>[
                     _buildBaseLayer(),
@@ -468,9 +474,9 @@ class _VehicleMarker extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: selected ? const Color(0xff0d47a1) : Colors.white,
+              color: selected ? AppPalette.markerSelected : Colors.white,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xffcfd8e3)),
+              border: Border.all(color: AppPalette.borderSoft),
             ),
             child: Text(
               plate,

@@ -149,7 +149,7 @@ class BackendClient {
       }
       history.add(TravelHistoryItem.fromBackend(row));
     }
-    history.sort((TravelHistoryItem a, TravelHistoryItem b) => b.gpsDate.compareTo(a.gpsDate));
+    history.sort((TravelHistoryItem a, TravelHistoryItem b) => a.gpsDate.compareTo(b.gpsDate));
     return history;
   }
 

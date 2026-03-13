@@ -518,6 +518,27 @@ double asDouble(dynamic value) {
   return double.tryParse(value.toString()) ?? 0;
 }
 
+String formatBackendDateTime(String raw) {
+  final String normalized = raw.trim().replaceAll('T', ' ');
+  if (normalized.isEmpty) {
+    return '';
+  }
+
+  final DateTime? parsed = DateTime.tryParse(normalized.replaceFirst(' ', 'T'));
+  if (parsed == null) {
+    return normalized;
+  }
+
+  final DateTime value = parsed.isUtc ? parsed.toLocal() : parsed;
+  final String year = value.year.toString().padLeft(4, '0');
+  final String month = value.month.toString().padLeft(2, '0');
+  final String day = value.day.toString().padLeft(2, '0');
+  final String hour = value.hour.toString().padLeft(2, '0');
+  final String minute = value.minute.toString().padLeft(2, '0');
+  final String second = value.second.toString().padLeft(2, '0');
+  return '$year-$month-$day $hour:$minute:$second';
+}
+
 List<GeoPoint> _extractPolygonFromGeoJson(String geoJsonRaw) {
   if (geoJsonRaw.trim().isEmpty) {
     return const <GeoPoint>[];
