@@ -11,10 +11,12 @@ class NotificationTokenService {
   final bool firebaseReady;
   final String? bootstrapError;
 
-  TokenResult emptyTokenResult({String? diagnostic}) {
+  TokenResult emptyTokenResult({String? diagnostic, String? permissionStatus, int apnsLength = 0}) {
     return TokenResult.empty(
       platform: _platformName(),
       diagnostic: diagnostic,
+      permissionStatus: permissionStatus,
+      apnsLength: apnsLength,
     );
   }
 
@@ -56,6 +58,8 @@ class NotificationTokenService {
 
     late final FirebaseMessaging messaging;
 
+    String permissionStatus = 'unknown';
+
     try {
       messaging = FirebaseMessaging.instance;
       final NotificationSettings settings = await messaging.requestPermission(
@@ -64,15 +68,18 @@ class NotificationTokenService {
         sound: true,
         provisional: false,
       );
+      permissionStatus = settings.authorizationStatus.name;
 
       if (settings.authorizationStatus == AuthorizationStatus.denied) {
         return emptyTokenResult(
           diagnostic: 'El usuario rechazo el permiso de notificaciones.',
+          permissionStatus: permissionStatus,
         );
       }
-    } catch (_) {
+    } catch (ex) {
       return emptyTokenResult(
-        diagnostic: 'Fallo solicitando permisos o inicializando Firebase Messaging.',
+        diagnostic: 'Fallo solicitando permisos o inicializando Firebase Messaging: $ex',
+        permissionStatus: permissionStatus,
       );
     }
 
@@ -106,6 +113,8 @@ class NotificationTokenService {
           provider: 'fcm',
           platform: _platformName(),
           diagnostic: 'Token FCM obtenido correctamente.',
+          permissionStatus: permissionStatus,
+          apnsLength: (apnsToken ?? '').length,
         );
       }
 
@@ -116,12 +125,16 @@ class NotificationTokenService {
       return emptyTokenResult(
         diagnostic:
             'No se obtuvo token APNs. Aunque enviaremos por FCM, iOS igual necesita Push Notifications/APNs activos en Apple Developer y en el provisioning profile.',
+        permissionStatus: permissionStatus,
+        apnsLength: 0,
       );
     }
 
     return emptyTokenResult(
       diagnostic:
           'APNs ya respondio, pero Firebase no entrego el token FCM. Revisa en Firebase > Cloud Messaging la APNs Auth Key (.p8), Team ID y Key ID, luego reinstala la app.',
+      permissionStatus: permissionStatus,
+      apnsLength: (apnsToken ?? '').length,
     );
   }
 
@@ -142,22 +155,30 @@ class TokenResult {
     required this.provider,
     required this.platform,
     this.diagnostic,
+    this.permissionStatus,
+    this.apnsLength = 0,
   });
 
   final String token;
   final String provider;
   final String platform;
   final String? diagnostic;
+  final String? permissionStatus;
+  final int apnsLength;
 
   factory TokenResult.empty({
     required String platform,
     String? diagnostic,
+    String? permissionStatus,
+    int apnsLength = 0,
   }) {
     return TokenResult(
       token: 'vacio',
       provider: 'none',
       platform: platform,
       diagnostic: diagnostic,
+      permissionStatus: permissionStatus,
+      apnsLength: apnsLength,
     );
   }
 }

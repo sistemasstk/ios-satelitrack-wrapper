@@ -632,6 +632,9 @@ class AppController extends ChangeNotifier {
       'Firebase listo: ${notificationSetupWarning == null ? 'si' : 'no'}',
       'Provider: ${tokenResult.provider}',
       'Platform: ${tokenResult.platform}',
+      if ((tokenResult.permissionStatus ?? '').isNotEmpty)
+        'Permiso notificaciones: ${tokenResult.permissionStatus}',
+      'APNs length: ${tokenResult.apnsLength}',
       'Longitud token: $tokenLength',
       'Token: $safeToken',
       if ((tokenResult.diagnostic ?? '').isNotEmpty) 'Detalle: ${tokenResult.diagnostic!}',
