@@ -16,7 +16,7 @@ workflows:
       vars:
         APP_BASE_URL: "https://app.satelitrack.com.co/"
         APP_VERSION: "2025"
-        APP_DISPLAY_NAME: "Satelitrack GPS"
+        APP_DISPLAY_NAME: "Satelitrack"
         APP_STORE_VERSION: "1.2.0"
         APPLE_TEAM_ID: "9JJHM44432"
         IOS_BUNDLE_IDENTIFIER: "novadev.Satelital"
@@ -56,10 +56,10 @@ workflows:
           if [ -f "$INFO_PLIST" ]; then
             /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" "$INFO_PLIST" 2>/dev/null || true
             /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string remote-notification" "$INFO_PLIST" 2>/dev/null || true
-            plutil -replace CFBundleDisplayName -string "${APP_DISPLAY_NAME:-Satelitrack GPS}" "$INFO_PLIST" 2>/dev/null || \
-              plutil -insert CFBundleDisplayName -string "${APP_DISPLAY_NAME:-Satelitrack GPS}" "$INFO_PLIST"
-            plutil -replace CFBundleName -string "${APP_DISPLAY_NAME:-Satelitrack GPS}" "$INFO_PLIST" 2>/dev/null || \
-              plutil -insert CFBundleName -string "${APP_DISPLAY_NAME:-Satelitrack GPS}" "$INFO_PLIST"
+            plutil -replace CFBundleDisplayName -string "${APP_DISPLAY_NAME:-Satelitrack}" "$INFO_PLIST" 2>/dev/null || \
+              plutil -insert CFBundleDisplayName -string "${APP_DISPLAY_NAME:-Satelitrack}" "$INFO_PLIST"
+            plutil -replace CFBundleName -string "${APP_DISPLAY_NAME:-Satelitrack}" "$INFO_PLIST" 2>/dev/null || \
+              plutil -insert CFBundleName -string "${APP_DISPLAY_NAME:-Satelitrack}" "$INFO_PLIST"
             /usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$INFO_PLIST" || true
           else
             echo "WARN: Info.plist no encontrado en $INFO_PLIST"
@@ -160,11 +160,11 @@ workflows:
           if [ -z "$SAFE_BUILD_NUMBER" ]; then SAFE_BUILD_NUMBER="1"; fi
           echo "Using iOS build-number: $SAFE_BUILD_NUMBER"
           flutter build ipa --release \
-            --build-name=$APP_STORE_VERSION \
-            --build-number=$SAFE_BUILD_NUMBER \
-            --dart-define=APP_DISPLAY_NAME=$APP_DISPLAY_NAME \
-            --dart-define=APP_BASE_URL=$APP_BASE_URL \
-            --dart-define=APP_VERSION=$APP_VERSION
+            "--build-name=${APP_STORE_VERSION}" \
+            "--build-number=${SAFE_BUILD_NUMBER}" \
+            "--dart-define=APP_DISPLAY_NAME=${APP_DISPLAY_NAME}" \
+            "--dart-define=APP_BASE_URL=${APP_BASE_URL}" \
+            "--dart-define=APP_VERSION=${APP_VERSION}"
       - name: Export IPA from archive if missing
         script: |
           if ! find build -type f -name "*.ipa" | grep -q .; then
@@ -279,7 +279,7 @@ workflows:
       vars:
         APP_BASE_URL: "https://app.satelitrack.com.co/"
         APP_VERSION: "2025"
-        APP_DISPLAY_NAME: "Satelitrack GPS"
+        APP_DISPLAY_NAME: "Satelitrack"
         APP_STORE_VERSION: "1.2.0"
         APPLE_TEAM_ID: "9JJHM44432"
         IOS_BUNDLE_IDENTIFIER: "novadev.Satelital"
@@ -319,10 +319,10 @@ workflows:
           if [ -f "$INFO_PLIST" ]; then
             /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" "$INFO_PLIST" 2>/dev/null || true
             /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string remote-notification" "$INFO_PLIST" 2>/dev/null || true
-            plutil -replace CFBundleDisplayName -string "${APP_DISPLAY_NAME:-Satelitrack GPS}" "$INFO_PLIST" 2>/dev/null || \
-              plutil -insert CFBundleDisplayName -string "${APP_DISPLAY_NAME:-Satelitrack GPS}" "$INFO_PLIST"
-            plutil -replace CFBundleName -string "${APP_DISPLAY_NAME:-Satelitrack GPS}" "$INFO_PLIST" 2>/dev/null || \
-              plutil -insert CFBundleName -string "${APP_DISPLAY_NAME:-Satelitrack GPS}" "$INFO_PLIST"
+            plutil -replace CFBundleDisplayName -string "${APP_DISPLAY_NAME:-Satelitrack}" "$INFO_PLIST" 2>/dev/null || \
+              plutil -insert CFBundleDisplayName -string "${APP_DISPLAY_NAME:-Satelitrack}" "$INFO_PLIST"
+            plutil -replace CFBundleName -string "${APP_DISPLAY_NAME:-Satelitrack}" "$INFO_PLIST" 2>/dev/null || \
+              plutil -insert CFBundleName -string "${APP_DISPLAY_NAME:-Satelitrack}" "$INFO_PLIST"
             /usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$INFO_PLIST" || true
           else
             echo "WARN: Info.plist no encontrado en $INFO_PLIST"
@@ -423,11 +423,11 @@ workflows:
           if [ -z "$SAFE_BUILD_NUMBER" ]; then SAFE_BUILD_NUMBER="1"; fi
           echo "Using iOS build-number: $SAFE_BUILD_NUMBER"
           flutter build ipa --release \
-            --build-name=$APP_STORE_VERSION \
-            --build-number=$SAFE_BUILD_NUMBER \
-            --dart-define=APP_DISPLAY_NAME=$APP_DISPLAY_NAME \
-            --dart-define=APP_BASE_URL=$APP_BASE_URL \
-            --dart-define=APP_VERSION=$APP_VERSION
+            "--build-name=${APP_STORE_VERSION}" \
+            "--build-number=${SAFE_BUILD_NUMBER}" \
+            "--dart-define=APP_DISPLAY_NAME=${APP_DISPLAY_NAME}" \
+            "--dart-define=APP_BASE_URL=${APP_BASE_URL}" \
+            "--dart-define=APP_VERSION=${APP_VERSION}"
       - name: Export IPA from archive if missing
         script: |
           if ! find build -type f -name "*.ipa" | grep -q .; then
