@@ -1,4 +1,9 @@
 class AppConfig {
+  static const String appName = String.fromEnvironment(
+    'APP_DISPLAY_NAME',
+    defaultValue: 'Satelitrack GPS',
+  );
+
   static const String baseUrl = String.fromEnvironment(
     'APP_BASE_URL',
     defaultValue: 'https://app.satelitrack.com.co/',

@@ -133,6 +133,8 @@ class AppController extends ChangeNotifier {
             message: 'La sesion expiro durante la carga inicial.',
           );
         }
+      } catch (_) {
+        errorMessage ??= 'La sesion inicio, pero no fue posible cargar la informacion inicial.';
       }
 
       loggingIn = false;

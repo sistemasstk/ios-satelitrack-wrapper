@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
+import '../config/app_config.dart';
 import '../theme/app_palette.dart';
 
 class LoginPage extends StatefulWidget {
@@ -70,7 +71,7 @@ class _LoginPageState extends State<LoginPage> {
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
                           const Text(
-                            'Satelitrack',
+                            AppConfig.appName,
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 26,

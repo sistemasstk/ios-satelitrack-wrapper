@@ -43,8 +43,14 @@ class BackendClient {
       request.headers['Cookie'] = _sessionCookie!;
     }
 
-    final http.StreamedResponse response = await _httpClient.send(request);
-    final String body = await response.stream.bytesToString();
+    final http.StreamedResponse response;
+    final String body;
+    try {
+      response = await _httpClient.send(request);
+      body = await response.stream.bytesToString();
+    } catch (ex) {
+      throw BackendException(_networkExceptionMessage(ex));
+    }
     final String location = (response.headers['location'] ?? '').toLowerCase();
     final String? newSessionCookie = _extractPhpSessionCookie(response.headers['set-cookie']);
 
@@ -565,14 +571,19 @@ class BackendClient {
 
     final Map<String, dynamic> body = <String, dynamic>{'idfn': idfn.toString(), ...?payload};
 
-    final http.Response response = await _httpClient.post(
-      AppConfig.resolve('includes/funciones.php'),
-      headers: <String, String>{
-        'Content-Type': 'application/json',
-        'Cookie': _sessionCookie!,
-      },
-      body: jsonEncode(body),
-    );
+    final http.Response response;
+    try {
+      response = await _httpClient.post(
+        AppConfig.resolve('includes/funciones.php'),
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+          'Cookie': _sessionCookie!,
+        },
+        body: jsonEncode(body),
+      );
+    } catch (ex) {
+      throw BackendException(_networkExceptionMessage(ex));
+    }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw BackendException('Backend devolvio HTTP ${response.statusCode}.');
@@ -601,14 +612,19 @@ class BackendClient {
       throw const BackendException('Sesion no disponible. Inicia sesion de nuevo.');
     }
 
-    final http.Response response = await _httpClient.post(
-      AppConfig.resolve(path),
-      headers: <String, String>{
-        'Content-Type': 'application/json',
-        'Cookie': _sessionCookie!,
-      },
-      body: jsonEncode(payload),
-    );
+    final http.Response response;
+    try {
+      response = await _httpClient.post(
+        AppConfig.resolve(path),
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+          'Cookie': _sessionCookie!,
+        },
+        body: jsonEncode(payload),
+      );
+    } catch (ex) {
+      throw BackendException(_networkExceptionMessage(ex));
+    }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw BackendException('Backend devolvio HTTP ${response.statusCode}.');
@@ -708,6 +724,24 @@ String _formatDateTime(DateTime value) {
   final String minute = value.minute.toString().padLeft(2, '0');
   final String second = value.second.toString().padLeft(2, '0');
   return '$year-$month-$day $hour:$minute:$second';
+}
+
+String _networkExceptionMessage(Object error) {
+  final String raw = error.toString().toLowerCase();
+  if (raw.contains('timed out')) {
+    return 'El servidor tardo demasiado en responder.';
+  }
+  if (raw.contains('certificate') || raw.contains('handshake')) {
+    return 'No fue posible validar la conexion segura con el servidor.';
+  }
+  if (raw.contains('socketexception') ||
+      raw.contains('failed host lookup') ||
+      raw.contains('connection closed') ||
+      raw.contains('connection refused') ||
+      raw.contains('network is unreachable')) {
+    return 'No fue posible conectar con el servidor.';
+  }
+  return 'Ocurrio un error de red al comunicar con el servidor.';
 }
 
 int _appVersionNumber() {

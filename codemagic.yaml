@@ -16,6 +16,7 @@ workflows:
       vars:
         APP_BASE_URL: "https://app.satelitrack.com.co/"
         APP_VERSION: "2025"
+        APP_DISPLAY_NAME: "Satelitrack GPS"
         APP_STORE_VERSION: "1.2.0"
         APPLE_TEAM_ID: "9JJHM44432"
       ios_signing:
@@ -54,6 +55,11 @@ workflows:
           if [ -f "$INFO_PLIST" ]; then
             /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" "$INFO_PLIST" 2>/dev/null || true
             /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string remote-notification" "$INFO_PLIST" 2>/dev/null || true
+            plutil -replace CFBundleDisplayName -string "${APP_DISPLAY_NAME:-Satelitrack GPS}" "$INFO_PLIST" 2>/dev/null || \
+              plutil -insert CFBundleDisplayName -string "${APP_DISPLAY_NAME:-Satelitrack GPS}" "$INFO_PLIST"
+            plutil -replace CFBundleName -string "${APP_DISPLAY_NAME:-Satelitrack GPS}" "$INFO_PLIST" 2>/dev/null || \
+              plutil -insert CFBundleName -string "${APP_DISPLAY_NAME:-Satelitrack GPS}" "$INFO_PLIST"
+            /usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$INFO_PLIST" || true
           else
             echo "WARN: Info.plist no encontrado en $INFO_PLIST"
           fi
@@ -263,6 +269,7 @@ workflows:
       vars:
         APP_BASE_URL: "https://app.satelitrack.com.co/"
         APP_VERSION: "2025"
+        APP_DISPLAY_NAME: "Satelitrack GPS"
         APP_STORE_VERSION: "1.2.0"
         APPLE_TEAM_ID: "9JJHM44432"
       ios_signing:
@@ -301,6 +308,11 @@ workflows:
           if [ -f "$INFO_PLIST" ]; then
             /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" "$INFO_PLIST" 2>/dev/null || true
             /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string remote-notification" "$INFO_PLIST" 2>/dev/null || true
+            plutil -replace CFBundleDisplayName -string "${APP_DISPLAY_NAME:-Satelitrack GPS}" "$INFO_PLIST" 2>/dev/null || \
+              plutil -insert CFBundleDisplayName -string "${APP_DISPLAY_NAME:-Satelitrack GPS}" "$INFO_PLIST"
+            plutil -replace CFBundleName -string "${APP_DISPLAY_NAME:-Satelitrack GPS}" "$INFO_PLIST" 2>/dev/null || \
+              plutil -insert CFBundleName -string "${APP_DISPLAY_NAME:-Satelitrack GPS}" "$INFO_PLIST"
+            /usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$INFO_PLIST" || true
           else
             echo "WARN: Info.plist no encontrado en $INFO_PLIST"
           fi
