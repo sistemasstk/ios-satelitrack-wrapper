@@ -14,8 +14,9 @@ class NotificationTokenService {
   }
 
   Future<TokenResult> resolveToken() async {
+    final FirebaseMessaging messaging = FirebaseMessaging.instance;
+
     try {
-      final FirebaseMessaging messaging = FirebaseMessaging.instance;
       final NotificationSettings settings = await messaging.requestPermission(
         alert: true,
         badge: true,
@@ -26,40 +27,54 @@ class NotificationTokenService {
       if (settings.authorizationStatus == AuthorizationStatus.denied) {
         return TokenResult.empty(platform: _platformName());
       }
+    } catch (_) {
+      return TokenResult.empty(platform: _platformName());
+    }
 
-      String? apnsToken;
-      String? fcmToken;
-      for (int i = 0; i < 15; i++) {
-        apnsToken ??= await messaging.getAPNSToken();
-        fcmToken ??= await messaging.getToken();
-
-        if ((apnsToken ?? '').isNotEmpty || (fcmToken ?? '').isNotEmpty) {
-          break;
+    String? apnsToken;
+    String? fcmToken;
+    for (int i = 0; i < 20; i++) {
+      try {
+        final String? candidateApns = await messaging.getAPNSToken();
+        if ((candidateApns ?? '').trim().isNotEmpty) {
+          apnsToken = candidateApns!.trim();
         }
-
-        await Future<void>.delayed(const Duration(milliseconds: 350));
+      } catch (_) {
+        // Keep polling; APNs token may not be available immediately on iOS.
       }
 
-      if (apnsToken != null && apnsToken.isNotEmpty) {
-        return TokenResult(
-          token: apnsToken,
-          provider: 'apns',
-          platform: _platformName(),
-        );
+      final bool canRequestFcm = !Platform.isIOS || (apnsToken ?? '').isNotEmpty;
+      if (canRequestFcm) {
+        try {
+          final String? candidateFcm = await messaging.getToken();
+          if ((candidateFcm ?? '').trim().isNotEmpty) {
+            fcmToken = candidateFcm!.trim();
+          }
+        } catch (_) {
+          // Firebase can throw before APNs registration is fully ready.
+        }
       }
 
-      if (fcmToken != null && fcmToken.isNotEmpty) {
+      if ((fcmToken ?? '').isNotEmpty) {
         return TokenResult(
-          token: fcmToken,
+          token: fcmToken!,
           provider: 'fcm',
           platform: _platformName(),
         );
       }
 
-      return TokenResult.empty(platform: _platformName());
-    } catch (_) {
-      return TokenResult.empty(platform: _platformName());
+      if ((apnsToken ?? '').isNotEmpty && i >= 2) {
+        return TokenResult(
+          token: apnsToken!,
+          provider: 'apns',
+          platform: _platformName(),
+        );
+      }
+
+      await Future<void>.delayed(const Duration(milliseconds: 400));
     }
+
+    return TokenResult.empty(platform: _platformName());
   }
 
   String _platformName() {

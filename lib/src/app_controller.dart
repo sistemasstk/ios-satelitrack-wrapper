@@ -553,11 +553,11 @@ class AppController extends ChangeNotifier {
         session = updatedSession;
         await _sessionStore.save(updatedSession);
         notifyListeners();
+        return;
       } catch (_) {
-        // Ignore sync errors; login and dashboard remain usable.
+        // Keep retrying; first sync can fail while session/token are still settling.
+        continue;
       }
-
-      return;
     }
   }
 
