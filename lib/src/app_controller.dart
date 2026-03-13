@@ -634,6 +634,7 @@ class AppController extends ChangeNotifier {
       'Platform: ${tokenResult.platform}',
       'Longitud token: $tokenLength',
       'Token: $safeToken',
+      if ((tokenResult.diagnostic ?? '').isNotEmpty) 'Detalle: ${tokenResult.diagnostic!}',
       if ((notificationSetupWarning ?? '').isNotEmpty) 'Aviso: ${notificationSetupWarning!}',
     ].join('\n');
     debugPrint('PUSH_DEBUG[$origin] provider=${tokenResult.provider} '

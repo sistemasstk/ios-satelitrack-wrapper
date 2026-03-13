@@ -11,8 +11,11 @@ class NotificationTokenService {
   final bool firebaseReady;
   final String? bootstrapError;
 
-  TokenResult emptyTokenResult() {
-    return TokenResult.empty(platform: _platformName());
+  TokenResult emptyTokenResult({String? diagnostic}) {
+    return TokenResult.empty(
+      platform: _platformName(),
+      diagnostic: diagnostic,
+    );
   }
 
   String? get diagnosticMessage {
@@ -39,13 +42,16 @@ class NotificationTokenService {
         token: token.trim().isEmpty ? 'vacio' : token.trim(),
         provider: 'fcm',
         platform: _platformName(),
+        diagnostic: 'Token actualizado desde Firebase onTokenRefresh.',
       ),
     );
   }
 
   Future<TokenResult> resolveToken() async {
     if (!firebaseReady) {
-      return emptyTokenResult();
+      return emptyTokenResult(
+        diagnostic: diagnosticMessage ?? 'Firebase no esta listo en esta compilacion.',
+      );
     }
 
     late final FirebaseMessaging messaging;
@@ -60,15 +66,19 @@ class NotificationTokenService {
       );
 
       if (settings.authorizationStatus == AuthorizationStatus.denied) {
-        return emptyTokenResult();
+        return emptyTokenResult(
+          diagnostic: 'El usuario rechazo el permiso de notificaciones.',
+        );
       }
     } catch (_) {
-      return emptyTokenResult();
+      return emptyTokenResult(
+        diagnostic: 'Fallo solicitando permisos o inicializando Firebase Messaging.',
+      );
     }
 
     String? apnsToken;
     String? fcmToken;
-    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i < 30; i++) {
       try {
         final String? candidateApns = await messaging.getAPNSToken();
         if ((candidateApns ?? '').trim().isNotEmpty) {
@@ -95,21 +105,24 @@ class NotificationTokenService {
           token: fcmToken!,
           provider: 'fcm',
           platform: _platformName(),
+          diagnostic: 'Token FCM obtenido correctamente.',
         );
       }
 
-      if ((apnsToken ?? '').isNotEmpty && i >= 2) {
-        return TokenResult(
-          token: apnsToken!,
-          provider: 'apns',
-          platform: _platformName(),
-        );
-      }
-
-      await Future<void>.delayed(const Duration(milliseconds: 400));
+      await Future<void>.delayed(const Duration(milliseconds: 500));
     }
 
-    return emptyTokenResult();
+    if ((apnsToken ?? '').isEmpty) {
+      return emptyTokenResult(
+        diagnostic:
+            'No se obtuvo token APNs. Aunque enviaremos por FCM, iOS igual necesita Push Notifications/APNs activos en Apple Developer y en el provisioning profile.',
+      );
+    }
+
+    return emptyTokenResult(
+      diagnostic:
+          'APNs ya respondio, pero Firebase no entrego el token FCM. Revisa en Firebase > Cloud Messaging la APNs Auth Key (.p8), Team ID y Key ID, luego reinstala la app.',
+    );
   }
 
   String _platformName() {
@@ -128,13 +141,23 @@ class TokenResult {
     required this.token,
     required this.provider,
     required this.platform,
+    this.diagnostic,
   });
 
   final String token;
   final String provider;
   final String platform;
+  final String? diagnostic;
 
-  factory TokenResult.empty({required String platform}) {
-    return TokenResult(token: 'vacio', provider: 'none', platform: platform);
+  factory TokenResult.empty({
+    required String platform,
+    String? diagnostic,
+  }) {
+    return TokenResult(
+      token: 'vacio',
+      provider: 'none',
+      platform: platform,
+      diagnostic: diagnostic,
+    );
   }
 }
