@@ -8,37 +8,95 @@ import sys
 from pathlib import Path
 
 
-SYSTEM_CAPABILITIES_BLOCK = """\t\t\t\t\tSystemCapabilities = {
-\t\t\t\t\t\tcom.apple.BackgroundModes = {
-\t\t\t\t\t\t\tenabled = 1;
-\t\t\t\t\t\t};
-\t\t\t\t\t\tcom.apple.Push = {
-\t\t\t\t\t\t\tenabled = 1;
-\t\t\t\t\t\t};
-\t\t\t\t\t};
-"""
+def _find_brace_block(text: str, marker: str) -> tuple[int, int, int] | None:
+    marker_index = text.find(marker)
+    if marker_index == -1:
+        return None
+
+    open_brace = text.find("{", marker_index)
+    if open_brace == -1:
+        return None
+
+    depth = 0
+    for index in range(open_brace, len(text)):
+        char = text[index]
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return marker_index, open_brace, index
+    return None
 
 
-def _ensure_capability(block: str, capability: str) -> str:
-    pattern = re.compile(
-        rf"(?ms)^(\t{{5}}{re.escape(capability)} = \{{\n)(.*?)(^\t{{5}}\}};)$"
+def _build_system_capabilities(indent: str) -> str:
+    child = indent + "\t"
+    grandchild = child + "\t"
+    return (
+        f"{indent}SystemCapabilities = {{\n"
+        f"{child}com.apple.BackgroundModes = {{\n"
+        f"{grandchild}enabled = 1;\n"
+        f"{child}}};\n"
+        f"{child}com.apple.Push = {{\n"
+        f"{grandchild}enabled = 1;\n"
+        f"{child}}};\n"
+        f"{indent}}};\n"
     )
-    match = pattern.search(block)
-    if match:
-        head, body, tail = match.groups()
-        if "enabled = 1;" in body:
-            return block
-        body = re.sub(r"(?m)^\t{6}enabled = \d;$", "\t\t\t\t\t\tenabled = 1;", body)
-        if "enabled =" not in body:
-            body += "\t\t\t\t\t\tenabled = 1;\n"
-        return block[: match.start()] + head + body + tail + block[match.end() :]
 
-    insertion = (
-        f"\t\t\t\t\t{capability} = {{\n"
-        "\t\t\t\t\t\tenabled = 1;\n"
-        "\t\t\t\t\t};\n"
-    )
-    return block.replace("\t\t\t\t\t};\n", insertion + "\t\t\t\t\t};\n", 1)
+
+def _ensure_system_capabilities(block: str, indent: str) -> str:
+    marker = "SystemCapabilities = {"
+    existing = _find_brace_block(block, marker)
+    if existing is None:
+        parent_indent = indent[:-1] if indent.endswith("\t") else indent
+        stripped = block.rstrip("\n")
+        closing_line = f"{parent_indent}}};"
+        if stripped.endswith(closing_line):
+            return stripped[: -len(closing_line)] + _build_system_capabilities(indent) + closing_line
+        return stripped + "\n" + _build_system_capabilities(indent) + closing_line
+
+    marker_index, open_brace, close_brace = existing
+    body = block[open_brace + 1 : close_brace]
+    changed = False
+    child = indent + "\t"
+    grandchild = child + "\t"
+
+    def ensure_capability(capability: str, body_text: str) -> str:
+        nonlocal changed
+        pattern = re.compile(
+            rf"(?ms)^({re.escape(child)}{re.escape(capability)} = \{{\n)(.*?)(^{re.escape(child)}\}};\n?)"
+        )
+        match = pattern.search(body_text)
+        if match:
+            head, current, tail = match.groups()
+            updated_current = current
+            if "enabled = 1;" not in current:
+                if re.search(r"(?m)^\s*enabled = \d;\s*$", current):
+                    updated_current = re.sub(
+                        r"(?m)^\s*enabled = \d;\s*$",
+                        f"{grandchild}enabled = 1;",
+                        current,
+                    )
+                else:
+                    updated_current += f"{grandchild}enabled = 1;\n"
+            if updated_current != current:
+                changed = True
+            return body_text[: match.start()] + head + updated_current + tail + body_text[match.end() :]
+
+        changed = True
+        insertion = (
+            f"{child}{capability} = {{\n"
+            f"{grandchild}enabled = 1;\n"
+            f"{child}}};\n"
+        )
+        return body_text + insertion
+
+    updated_body = ensure_capability("com.apple.BackgroundModes", body)
+    updated_body = ensure_capability("com.apple.Push", updated_body)
+    if updated_body == body:
+        return block
+
+    return block[: open_brace + 1] + updated_body + block[close_brace:]
 
 
 def _patch_target_attribute_block(block: str) -> str:
@@ -54,44 +112,56 @@ def _patch_target_attribute_block(block: str) -> str:
     if not looks_like_app_target:
         return block
 
-    if "SystemCapabilities = {" not in block:
-        return block.replace("\t\t\t\t};\n", SYSTEM_CAPABILITIES_BLOCK + "\t\t\t\t};\n", 1)
+    match = re.match(r"^([ \t]*)[0-9A-F]+ = \{\n", block)
+    if not match:
+        return block
 
-    updated = _ensure_capability(block, "com.apple.BackgroundModes")
-    updated = _ensure_capability(updated, "com.apple.Push")
-    return updated
+    block_indent = match.group(1)
+    inner_indent = block_indent + "\t"
+    return _ensure_system_capabilities(block, inner_indent)
 
 
 def ensure_push_capabilities(project_path: Path) -> bool:
     content = project_path.read_text(encoding="utf-8")
-    pattern = re.compile(
-        r"(?ms)(\t\t\tTargetAttributes = \{\n)(.*?)(\t\t\t\};\n\t\t\tbuildConfigurationList = )"
-    )
-    match = pattern.search(content)
-    if not match:
+    block_info = _find_brace_block(content, "TargetAttributes = {")
+    if block_info is None:
         return False
 
-    head, body, tail = match.groups()
-    block_pattern = re.compile(
-        r"(?ms)(^\t\t\t\t[0-9A-F]+ = \{\n)(.*?)(^\t\t\t\t\};$)"
-    )
+    _, open_brace, close_brace = block_info
+    body = content[open_brace + 1 : close_brace]
+    line_pattern = re.compile(r"^([ \t]*)[0-9A-F]+ = \{\n", re.M)
+    matches = list(line_pattern.finditer(body))
+    if not matches:
+        return False
 
+    updated_parts: list[str] = []
+    cursor = 0
     changed = False
 
-    def repl(block_match: re.Match[str]) -> str:
-        nonlocal changed
-        block_head, block_body, block_tail = block_match.groups()
-        original = block_head + block_body + block_tail
+    for match in matches:
+        start = match.start()
+        if start < cursor:
+            continue
+        block_text = body[start:]
+        block_info = _find_brace_block(block_text, match.group(0).strip())
+        if block_info is None:
+            continue
+        _, sub_open, sub_close = block_info
+        block_end = sub_close + 2  # include trailing ';'
+        original = block_text[:block_end]
         updated = _patch_target_attribute_block(original)
         if updated != original:
             changed = True
-        return updated
+        updated_parts.append(body[cursor:start])
+        updated_parts.append(updated)
+        cursor = start + block_end
 
-    updated_body = block_pattern.sub(repl, body)
+    updated_parts.append(body[cursor:])
     if not changed:
         return False
 
-    project_path.write_text(content[: match.start()] + head + updated_body + tail + content[match.end() :], encoding="utf-8")
+    updated_body = "".join(updated_parts)
+    project_path.write_text(content[: open_brace + 1] + updated_body + content[close_brace:], encoding="utf-8")
     return True
 
 
