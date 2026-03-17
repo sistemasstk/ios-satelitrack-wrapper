@@ -69,12 +69,15 @@ import UserNotifications
   }
 
   private func setupPushDebugChannel(application: UIApplication) {
-    let registrar = self.registrar(forPlugin: pushDebugPluginKey)
+    guard let registrar = self.registrar(forPlugin: pushDebugPluginKey) else {
+      defaults.set("push_debug_registrar_missing", forKey: "push_last_event")
+      return
+    }
     let channel = FlutterMethodChannel(
       name: pushDebugChannelName,
       binaryMessenger: registrar.messenger()
     )
-    channel.setMethodCallHandler { [weak self] call, result in
+    channel.setMethodCallHandler { [weak self] (call: FlutterMethodCall, result: @escaping FlutterResult) in
       guard let self = self else {
         result(FlutterError(code: "push_debug_unavailable", message: "AppDelegate unavailable", details: nil))
         return
