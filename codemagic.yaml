@@ -226,7 +226,6 @@ workflows:
             PRODUCT_BUNDLE_IDENTIFIER="${IOS_BUNDLE_IDENTIFIER}" \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_ENTITLEMENTS=Runner/Runner.entitlements \
-            PROVISIONING_PROFILE_SPECIFIER="${PROFILE_NAME}" \
             archive
       - name: Export IPA from archive if missing
         script: |
@@ -569,7 +568,6 @@ workflows:
             PRODUCT_BUNDLE_IDENTIFIER="${IOS_BUNDLE_IDENTIFIER}" \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_ENTITLEMENTS=Runner/Runner.entitlements \
-            PROVISIONING_PROFILE_SPECIFIER="${PROFILE_NAME}" \
             archive
       - name: Export IPA from archive if missing
         script: |
