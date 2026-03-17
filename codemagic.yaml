@@ -131,6 +131,11 @@ workflows:
       - name: Apply provisioning profiles
         script: |
           xcode-project use-profiles
+      - name: Re-apply push entitlements after profiles
+        script: |
+          python3 scripts/ensure_ios_push_entitlements.py \
+            ios/Runner.xcodeproj/project.pbxproj \
+            Runner/Runner.entitlements
       - name: Verify push entitlements in project
         script: |
           echo "== Runner entitlements =="
@@ -423,6 +428,11 @@ workflows:
       - name: Apply provisioning profiles
         script: |
           xcode-project use-profiles
+      - name: Re-apply push entitlements after profiles
+        script: |
+          python3 scripts/ensure_ios_push_entitlements.py \
+            ios/Runner.xcodeproj/project.pbxproj \
+            Runner/Runner.entitlements
       - name: Verify push entitlements in project
         script: |
           echo "== Runner entitlements =="
