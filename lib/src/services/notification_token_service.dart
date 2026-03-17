@@ -1,12 +1,17 @@
 import 'dart:io';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/services.dart';
 
 class NotificationTokenService {
   NotificationTokenService({
     this.firebaseReady = true,
     this.bootstrapError,
   });
+
+  static const MethodChannel _nativePushDebugChannel = MethodChannel(
+    'satelitrack/push_debug',
+  );
 
   final bool firebaseReady;
   final String? bootstrapError;
@@ -85,7 +90,17 @@ class NotificationTokenService {
 
     String? apnsToken;
     String? fcmToken;
+    NativePushDebugState nativeState = const NativePushDebugState();
+    await _requestNativeRegistration();
     for (int i = 0; i < 30; i++) {
+      nativeState = await _loadNativePushDebugState();
+      if (nativeState.apnsToken.isNotEmpty) {
+        apnsToken = nativeState.apnsToken;
+      }
+      if (nativeState.fcmToken.isNotEmpty) {
+        fcmToken = nativeState.fcmToken;
+      }
+
       try {
         final String? candidateApns = await messaging.getAPNSToken();
         if ((candidateApns ?? '').trim().isNotEmpty) {
@@ -124,7 +139,7 @@ class NotificationTokenService {
     if ((apnsToken ?? '').isEmpty) {
       return emptyTokenResult(
         diagnostic:
-            'No se obtuvo token APNs. Aunque enviaremos por FCM, iOS igual necesita Push Notifications/APNs activos en Apple Developer y en el provisioning profile.',
+            _buildApnsMissingDiagnostic(nativeState),
         permissionStatus: permissionStatus,
         apnsLength: 0,
       );
@@ -132,10 +147,72 @@ class NotificationTokenService {
 
     return emptyTokenResult(
       diagnostic:
-          'APNs ya respondio, pero Firebase no entrego el token FCM. Revisa en Firebase > Cloud Messaging la APNs Auth Key (.p8), Team ID y Key ID, luego reinstala la app.',
+          _buildFcmMissingDiagnostic(nativeState),
       permissionStatus: permissionStatus,
       apnsLength: (apnsToken ?? '').length,
     );
+  }
+
+  Future<void> _requestNativeRegistration() async {
+    if (!Platform.isIOS) {
+      return;
+    }
+    try {
+      await _nativePushDebugChannel.invokeMethod<Map<dynamic, dynamic>>('register');
+    } catch (_) {
+      // The app still has the Firebase path as fallback.
+    }
+  }
+
+  Future<NativePushDebugState> _loadNativePushDebugState() async {
+    if (!Platform.isIOS) {
+      return const NativePushDebugState();
+    }
+    try {
+      final Map<dynamic, dynamic>? payload =
+          await _nativePushDebugChannel.invokeMethod<Map<dynamic, dynamic>>('getState');
+      return NativePushDebugState.fromMap(payload);
+    } catch (_) {
+      return const NativePushDebugState();
+    }
+  }
+
+  String _buildApnsMissingDiagnostic(NativePushDebugState nativeState) {
+    final List<String> parts = <String>[
+      'No se obtuvo token APNs.',
+    ];
+    if (nativeState.lastEvent.isNotEmpty) {
+      parts.add('lastEvent=${nativeState.lastEvent}.');
+    }
+    parts.add(
+      nativeState.isRegisteredForRemoteNotifications
+          ? 'iOS reporta registro remoto activo.'
+          : 'iOS aun no reporta registro remoto activo.',
+    );
+    if (nativeState.apnsError.isNotEmpty) {
+      parts.add('Error nativo APNs: ${nativeState.apnsError}.');
+    } else {
+      parts.add(
+        'Aunque enviaremos por FCM, iOS igual necesita Push Notifications/APNs activos en Apple Developer y en el provisioning profile.',
+      );
+    }
+    return parts.join(' ');
+  }
+
+  String _buildFcmMissingDiagnostic(NativePushDebugState nativeState) {
+    final List<String> parts = <String>[
+      'APNs ya respondio, pero Firebase no entrego el token FCM.',
+    ];
+    if (nativeState.lastEvent.isNotEmpty) {
+      parts.add('lastEvent=${nativeState.lastEvent}.');
+    }
+    if (nativeState.apnsError.isNotEmpty) {
+      parts.add('Error nativo APNs: ${nativeState.apnsError}.');
+    }
+    parts.add(
+      'Revisa en Firebase > Cloud Messaging la APNs Auth Key (.p8), Team ID y Key ID, luego reinstala la app.',
+    );
+    return parts.join(' ');
   }
 
   String _platformName() {
@@ -146,6 +223,36 @@ class NotificationTokenService {
       return 'android';
     }
     return 'unknown';
+  }
+}
+
+class NativePushDebugState {
+  const NativePushDebugState({
+    this.apnsToken = '',
+    this.fcmToken = '',
+    this.apnsError = '',
+    this.lastEvent = '',
+    this.isRegisteredForRemoteNotifications = false,
+  });
+
+  final String apnsToken;
+  final String fcmToken;
+  final String apnsError;
+  final String lastEvent;
+  final bool isRegisteredForRemoteNotifications;
+
+  factory NativePushDebugState.fromMap(Map<dynamic, dynamic>? payload) {
+    if (payload == null) {
+      return const NativePushDebugState();
+    }
+    return NativePushDebugState(
+      apnsToken: (payload['apnsToken'] ?? '').toString(),
+      fcmToken: (payload['fcmToken'] ?? '').toString(),
+      apnsError: (payload['apnsError'] ?? '').toString(),
+      lastEvent: (payload['lastEvent'] ?? '').toString(),
+      isRegisteredForRemoteNotifications:
+          payload['isRegisteredForRemoteNotifications'] == true,
+    );
   }
 }
 

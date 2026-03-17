@@ -36,42 +36,7 @@ workflows:
             echo "WARN: AppDelegate.swift no encontrado en $APP_DELEGATE"
             exit 0
           fi
-          if grep -q "registerForRemoteNotifications" "$APP_DELEGATE"; then
-            echo "AppDelegate ya solicita registro remoto APNs"
-            exit 0
-          fi
-          python3 - "$APP_DELEGATE" <<'PY'
-          import pathlib
-          import re
-          import sys
-
-          path = pathlib.Path(sys.argv[1])
-          content = path.read_text()
-          updated = content
-
-          plugin_pattern = re.compile(r"(?m)^([ \t]*)GeneratedPluginRegistrant\.register\(with:\s*self\)\s*$")
-          if plugin_pattern.search(updated):
-              updated = plugin_pattern.sub(
-                  lambda m: f"{m.group(0)}\n{m.group(1)}application.registerForRemoteNotifications()",
-                  updated,
-                  count=1,
-              )
-          else:
-              return_pattern = re.compile(r"(?m)^([ \t]*)return\s+super\.application\(")
-              if return_pattern.search(updated):
-                  updated = return_pattern.sub(
-                      lambda m: f"{m.group(1)}application.registerForRemoteNotifications()\n{m.group(0)}",
-                      updated,
-                      count=1,
-                  )
-              else:
-                  print("WARN: no fue posible ubicar el punto de insercion en AppDelegate.swift")
-                  print(updated)
-                  raise SystemExit(0)
-
-          path.write_text(updated)
-          print("AppDelegate actualizado para registrar APNs")
-          PY
+          python3 scripts/render_push_app_delegate.py "$APP_DELEGATE"
       - name: Enable iOS push capabilities
         script: |
           INFO_PLIST="ios/Runner/Info.plist"
@@ -363,42 +328,7 @@ workflows:
             echo "WARN: AppDelegate.swift no encontrado en $APP_DELEGATE"
             exit 0
           fi
-          if grep -q "registerForRemoteNotifications" "$APP_DELEGATE"; then
-            echo "AppDelegate ya solicita registro remoto APNs"
-            exit 0
-          fi
-          python3 - "$APP_DELEGATE" <<'PY'
-          import pathlib
-          import re
-          import sys
-
-          path = pathlib.Path(sys.argv[1])
-          content = path.read_text()
-          updated = content
-
-          plugin_pattern = re.compile(r"(?m)^([ \t]*)GeneratedPluginRegistrant\.register\(with:\s*self\)\s*$")
-          if plugin_pattern.search(updated):
-              updated = plugin_pattern.sub(
-                  lambda m: f"{m.group(0)}\n{m.group(1)}application.registerForRemoteNotifications()",
-                  updated,
-                  count=1,
-              )
-          else:
-              return_pattern = re.compile(r"(?m)^([ \t]*)return\s+super\.application\(")
-              if return_pattern.search(updated):
-                  updated = return_pattern.sub(
-                      lambda m: f"{m.group(1)}application.registerForRemoteNotifications()\n{m.group(0)}",
-                      updated,
-                      count=1,
-                  )
-              else:
-                  print("WARN: no fue posible ubicar el punto de insercion en AppDelegate.swift")
-                  print(updated)
-                  raise SystemExit(0)
-
-          path.write_text(updated)
-          print("AppDelegate actualizado para registrar APNs")
-          PY
+          python3 scripts/render_push_app_delegate.py "$APP_DELEGATE"
       - name: Enable iOS push capabilities
         script: |
           INFO_PLIST="ios/Runner/Info.plist"
