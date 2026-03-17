@@ -62,38 +62,43 @@ class NotificationTokenService {
     }
 
     late final FirebaseMessaging messaging;
-
     String permissionStatus = 'unknown';
+    messaging = FirebaseMessaging.instance;
 
-    try {
-      messaging = FirebaseMessaging.instance;
-      final NotificationSettings settings = await messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-        provisional: false,
-      );
-      permissionStatus = settings.authorizationStatus.name;
+    if (Platform.isIOS) {
+      await _requestNativeRegistration();
+    } else {
+      try {
+        final NotificationSettings settings = await messaging.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+          provisional: false,
+        );
+        permissionStatus = settings.authorizationStatus.name;
 
-      if (settings.authorizationStatus == AuthorizationStatus.denied) {
+        if (settings.authorizationStatus == AuthorizationStatus.denied) {
+          return emptyTokenResult(
+            diagnostic: 'El usuario rechazo el permiso de notificaciones.',
+            permissionStatus: permissionStatus,
+          );
+        }
+      } catch (ex) {
         return emptyTokenResult(
-          diagnostic: 'El usuario rechazo el permiso de notificaciones.',
+          diagnostic: 'Fallo solicitando permisos o inicializando Firebase Messaging: $ex',
           permissionStatus: permissionStatus,
         );
       }
-    } catch (ex) {
-      return emptyTokenResult(
-        diagnostic: 'Fallo solicitando permisos o inicializando Firebase Messaging: $ex',
-        permissionStatus: permissionStatus,
-      );
     }
 
     String? apnsToken;
     String? fcmToken;
     NativePushDebugState nativeState = const NativePushDebugState();
-    await _requestNativeRegistration();
     for (int i = 0; i < 30; i++) {
       nativeState = await _loadNativePushDebugState();
+      if (nativeState.authorizationStatus.isNotEmpty) {
+        permissionStatus = nativeState.authorizationStatus;
+      }
       if (nativeState.apnsToken.isNotEmpty) {
         apnsToken = nativeState.apnsToken;
       }
@@ -184,6 +189,9 @@ class NotificationTokenService {
     if (nativeState.lastEvent.isNotEmpty) {
       parts.add('lastEvent=${nativeState.lastEvent}.');
     }
+    if (nativeState.authorizationStatus.isNotEmpty) {
+      parts.add('authorizationStatus=${nativeState.authorizationStatus}.');
+    }
     parts.add(
       nativeState.isRegisteredForRemoteNotifications
           ? 'iOS reporta registro remoto activo.'
@@ -206,8 +214,14 @@ class NotificationTokenService {
     if (nativeState.lastEvent.isNotEmpty) {
       parts.add('lastEvent=${nativeState.lastEvent}.');
     }
+    if (nativeState.authorizationStatus.isNotEmpty) {
+      parts.add('authorizationStatus=${nativeState.authorizationStatus}.');
+    }
     if (nativeState.apnsError.isNotEmpty) {
       parts.add('Error nativo APNs: ${nativeState.apnsError}.');
+    }
+    if (nativeState.fcmError.isNotEmpty) {
+      parts.add('Error nativo FCM: ${nativeState.fcmError}.');
     }
     parts.add(
       'Revisa en Firebase > Cloud Messaging la APNs Auth Key (.p8), Team ID y Key ID, luego reinstala la app.',
@@ -231,14 +245,18 @@ class NativePushDebugState {
     this.apnsToken = '',
     this.fcmToken = '',
     this.apnsError = '',
+    this.fcmError = '',
     this.lastEvent = '',
+    this.authorizationStatus = '',
     this.isRegisteredForRemoteNotifications = false,
   });
 
   final String apnsToken;
   final String fcmToken;
   final String apnsError;
+  final String fcmError;
   final String lastEvent;
+  final String authorizationStatus;
   final bool isRegisteredForRemoteNotifications;
 
   factory NativePushDebugState.fromMap(Map<dynamic, dynamic>? payload) {
@@ -249,7 +267,9 @@ class NativePushDebugState {
       apnsToken: (payload['apnsToken'] ?? '').toString(),
       fcmToken: (payload['fcmToken'] ?? '').toString(),
       apnsError: (payload['apnsError'] ?? '').toString(),
+      fcmError: (payload['fcmError'] ?? '').toString(),
       lastEvent: (payload['lastEvent'] ?? '').toString(),
+      authorizationStatus: (payload['authorizationStatus'] ?? '').toString(),
       isRegisteredForRemoteNotifications:
           payload['isRegisteredForRemoteNotifications'] == true,
     );
