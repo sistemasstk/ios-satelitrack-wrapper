@@ -267,14 +267,9 @@ workflows:
               <key>method</key>
               <string>app-store-connect</string>
               <key>signingStyle</key>
-              <string>manual</string>
+              <string>automatic</string>
               <key>teamID</key>
               <string>${APPLE_TEAM_ID}</string>
-              <key>provisioningProfiles</key>
-              <dict>
-                <key>${IOS_BUNDLE_IDENTIFIER}</key>
-                <string>${PROFILE_NAME}</string>
-              </dict>
               <key>destination</key>
               <string>export</string>
               <key>stripSwiftSymbols</key>
@@ -609,14 +604,9 @@ workflows:
               <key>method</key>
               <string>ad-hoc</string>
               <key>signingStyle</key>
-              <string>manual</string>
+              <string>automatic</string>
               <key>teamID</key>
               <string>${APPLE_TEAM_ID}</string>
-              <key>provisioningProfiles</key>
-              <dict>
-                <key>${IOS_BUNDLE_IDENTIFIER}</key>
-                <string>${PROFILE_NAME}</string>
-              </dict>
               <key>destination</key>
               <string>export</string>
               <key>stripSwiftSymbols</key>
