@@ -91,6 +91,10 @@ workflows:
             echo "WARN: project.pbxproj no encontrado en $PBXPROJ"
           fi
 
+          if [ -f "$PBXPROJ" ]; then
+            python3 scripts/ensure_ios_push_capabilities.py "$PBXPROJ"
+          fi
+
           echo "Push capabilities configuradas"
       - name: Allow app.satelitrack.com.co over ATS
         script: |
@@ -133,6 +137,8 @@ workflows:
           xcode-project use-profiles
       - name: Re-apply push entitlements after profiles
         script: |
+          python3 scripts/ensure_ios_push_capabilities.py \
+            ios/Runner.xcodeproj/project.pbxproj
           python3 scripts/ensure_ios_push_entitlements.py \
             ios/Runner.xcodeproj/project.pbxproj \
             Runner/Runner.entitlements
@@ -142,6 +148,8 @@ workflows:
           cat ios/Runner/Runner.entitlements || true
           echo "== CODE_SIGN_ENTITLEMENTS in project =="
           grep -n "CODE_SIGN_ENTITLEMENTS" ios/Runner.xcodeproj/project.pbxproj || true
+          echo "== SystemCapabilities references =="
+          grep -n "SystemCapabilities\\|com.apple.Push\\|com.apple.BackgroundModes" ios/Runner.xcodeproj/project.pbxproj || true
           echo "== aps-environment references =="
           grep -n "aps-environment" ios/Runner/Runner.entitlements ios/Runner.xcodeproj/project.pbxproj || true
       - name: Debug signing assets
@@ -268,6 +276,10 @@ workflows:
             codesign -d --entitlements :- "$APP_PATH" > /tmp/app_entitlements.plist 2>/tmp/codesign_entitlements.log || true
             cat /tmp/app_entitlements.plist || true
             cat /tmp/codesign_entitlements.log || true
+            if ! grep -q "aps-environment" /tmp/app_entitlements.plist 2>/dev/null; then
+              echo "ERROR: Signed Runner.app no incluye aps-environment."
+              exit 70
+            fi
           fi
           echo "== Find xcode logs =="
           find /tmp/xcodebuild_logs -type f -maxdepth 2 -print || true
@@ -388,6 +400,10 @@ workflows:
             echo "WARN: project.pbxproj no encontrado en $PBXPROJ"
           fi
 
+          if [ -f "$PBXPROJ" ]; then
+            python3 scripts/ensure_ios_push_capabilities.py "$PBXPROJ"
+          fi
+
           echo "Push capabilities configuradas"
       - name: Allow app.satelitrack.com.co over ATS
         script: |
@@ -430,6 +446,8 @@ workflows:
           xcode-project use-profiles
       - name: Re-apply push entitlements after profiles
         script: |
+          python3 scripts/ensure_ios_push_capabilities.py \
+            ios/Runner.xcodeproj/project.pbxproj
           python3 scripts/ensure_ios_push_entitlements.py \
             ios/Runner.xcodeproj/project.pbxproj \
             Runner/Runner.entitlements
@@ -439,6 +457,8 @@ workflows:
           cat ios/Runner/Runner.entitlements || true
           echo "== CODE_SIGN_ENTITLEMENTS in project =="
           grep -n "CODE_SIGN_ENTITLEMENTS" ios/Runner.xcodeproj/project.pbxproj || true
+          echo "== SystemCapabilities references =="
+          grep -n "SystemCapabilities\\|com.apple.Push\\|com.apple.BackgroundModes" ios/Runner.xcodeproj/project.pbxproj || true
           echo "== aps-environment references =="
           grep -n "aps-environment" ios/Runner/Runner.entitlements ios/Runner.xcodeproj/project.pbxproj || true
       - name: Debug signing assets
@@ -565,6 +585,10 @@ workflows:
             codesign -d --entitlements :- "$APP_PATH" > /tmp/app_entitlements.plist 2>/tmp/codesign_entitlements.log || true
             cat /tmp/app_entitlements.plist || true
             cat /tmp/codesign_entitlements.log || true
+            if ! grep -q "aps-environment" /tmp/app_entitlements.plist 2>/dev/null; then
+              echo "ERROR: Signed Runner.app no incluye aps-environment."
+              exit 70
+            fi
           fi
           echo "== Find xcode logs =="
           find /tmp/xcodebuild_logs -type f -maxdepth 2 -print || true

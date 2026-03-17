@@ -585,11 +585,15 @@ class BackendClient {
       throw BackendException(_networkExceptionMessage(ex));
     }
 
+    final String rawBody = response.body.trim();
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      final String backendError = _extractBackendError(rawBody);
+      if (backendError.isNotEmpty) {
+        throw BackendException(backendError);
+      }
       throw BackendException('Backend devolvio HTTP ${response.statusCode}.');
     }
 
-    final String rawBody = response.body.trim();
     if (rawBody.isEmpty) {
       return const <dynamic>[];
     }
@@ -600,6 +604,10 @@ class BackendClient {
     try {
       return jsonDecode(rawBody);
     } catch (_) {
+      final String backendError = _extractBackendError(rawBody);
+      if (backendError.isNotEmpty) {
+        throw BackendException(backendError);
+      }
       throw BackendException('No se pudo decodificar respuesta JSON: $rawBody');
     }
   }
@@ -626,11 +634,15 @@ class BackendClient {
       throw BackendException(_networkExceptionMessage(ex));
     }
 
+    final String rawBody = response.body.trim();
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      final String backendError = _extractBackendError(rawBody);
+      if (backendError.isNotEmpty) {
+        throw BackendException(backendError);
+      }
       throw BackendException('Backend devolvio HTTP ${response.statusCode}.');
     }
 
-    final String rawBody = response.body.trim();
     if (rawBody.isEmpty) {
       throw const BackendException('Respuesta vacia del backend.');
     }
@@ -642,6 +654,10 @@ class BackendClient {
     try {
       decoded = jsonDecode(rawBody);
     } catch (_) {
+      final String backendError = _extractBackendError(rawBody);
+      if (backendError.isNotEmpty) {
+        throw BackendException(backendError);
+      }
       throw BackendException('No se pudo decodificar respuesta JSON: $rawBody');
     }
 
@@ -698,6 +714,43 @@ class BackendClient {
     final RegExpMatch? match = RegExp(r'PHPSESSID=[^;, ]+').firstMatch(setCookieHeader);
     return match?.group(0);
   }
+}
+
+String _extractBackendError(String rawBody) {
+  final String trimmed = rawBody.trim();
+  if (trimmed.isEmpty) {
+    return '';
+  }
+
+  try {
+    final dynamic decoded = jsonDecode(trimmed);
+    if (decoded is Map<String, dynamic>) {
+      final String message = asString(
+        decoded['error'],
+        fallback: asString(decoded['message'], fallback: asString(decoded['mensaje1'])),
+      ).trim();
+      if (message.isNotEmpty) {
+        return message;
+      }
+    }
+  } catch (_) {
+    // Fall back to plain-text heuristics.
+  }
+
+  final String lower = trimmed.toLowerCase();
+  if (lower.contains('sesion invalida') ||
+      lower.contains('sesion no disponible') ||
+      lower.contains('sticky sessions') ||
+      lower.contains('almacenamiento compartido de sesiones')) {
+    return 'La sesion no esta disponible en este nodo del balanceador. Revisa sticky sessions o sesiones compartidas entre los servidores.';
+  }
+  if (lower.contains('no puedo,error select') ||
+      lower.contains('where (id_cliente= or id_empresa=') ||
+      lower.contains('where mt.id_cliente =')) {
+    return 'El servidor respondio sin sesion activa y genero SQL incompleto. Revisa sticky sessions o almacenamiento compartido de sesiones entre Windows y Ubuntu.';
+  }
+
+  return '';
 }
 
 class LoginResult {
