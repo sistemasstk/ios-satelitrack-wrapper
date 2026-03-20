@@ -17,7 +17,7 @@ workflows:
         APP_BASE_URL: "https://app.satelitrack.com.co/"
         APP_VERSION: "2026"
         APP_DISPLAY_NAME: "Satelitrack"
-        APP_STORE_VERSION: "1.2.0"
+        APP_STORE_VERSION: "1.3.0"
         APPLE_TEAM_ID: "9JJHM44432"
         IOS_BUNDLE_IDENTIFIER: "novadev.Satelital"
       ios_signing:
@@ -502,7 +502,7 @@ workflows:
         APP_BASE_URL: "https://app.satelitrack.com.co/"
         APP_VERSION: "2026"
         APP_DISPLAY_NAME: "Satelitrack"
-        APP_STORE_VERSION: "1.2.0"
+        APP_STORE_VERSION: "1.3.0"
         APPLE_TEAM_ID: "9JJHM44432"
         IOS_BUNDLE_IDENTIFIER: "novadev.Satelital"
       ios_signing:

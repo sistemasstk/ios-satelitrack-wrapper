@@ -1,7 +1,7 @@
 name: ios_satelitrack_wrapper
 description: Flutter iOS wrapper for Satelitrack app2025 with dual APNs/FCM bootstrap.
 publish_to: none
-version: 1.0.0+1
+version: 1.3.0+1
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
