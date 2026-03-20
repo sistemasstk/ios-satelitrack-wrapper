@@ -120,6 +120,36 @@ class _DashboardPageState extends State<DashboardPage> {
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 28),
       children: <Widget>[
+        if ((controller.sessionNoticeMessage ?? '').isNotEmpty)
+          Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            color: const Color(0xfffff3cd),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    controller.sessionNoticeMessage!,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xff7a5a00),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: FilledButton.tonal(
+                      onPressed: controller.loadingDashboard
+                          ? null
+                          : () => controller.refreshDashboard(),
+                      child: const Text('Reintentar conexion'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         Card(
           margin: const EdgeInsets.only(bottom: 12),
           child: Padding(

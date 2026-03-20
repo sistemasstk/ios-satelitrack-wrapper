@@ -25,6 +25,7 @@ class AppController extends ChangeNotifier {
   bool loggingIn = false;
   bool loadingDashboard = false;
   bool loadingPushDebug = false;
+  bool sessionRecoveryMode = false;
 
   UserSession? session;
   MobileModuleAccess? moduleAccess;
@@ -43,6 +44,7 @@ class AppController extends ChangeNotifier {
     bootstrapping = true;
     errorMessage = null;
     sessionNoticeMessage = null;
+    sessionRecoveryMode = false;
     notifyListeners();
 
     final UserSession? savedSession = await _sessionStore.load();
@@ -63,6 +65,12 @@ class AppController extends ChangeNotifier {
         // Keep dashboard available even if module permissions cannot be loaded.
       }
       unawaited(_syncNotificationToken());
+    } on BackendException catch (ex) {
+      if (_isRecoverableNodeSessionMessage(ex.message)) {
+        _markSessionUnavailable(message: ex.message);
+      } else {
+        await _markSessionLost(message: 'Tu sesion anterior ya no esta disponible. Ingresa nuevamente.');
+      }
     } catch (_) {
       await _markSessionLost(message: 'Tu sesion anterior ya no esta disponible. Ingresa nuevamente.');
     }
@@ -81,6 +89,7 @@ class AppController extends ChangeNotifier {
     errorMessage = null;
     pushDebugInfo = null;
     sessionNoticeMessage = null;
+    sessionRecoveryMode = false;
     notifyListeners();
 
     try {
@@ -135,6 +144,7 @@ class AppController extends ChangeNotifier {
       session = newSession;
       await _sessionStore.save(newSession);
       sessionNoticeMessage = null;
+      sessionRecoveryMode = false;
       unawaited(_syncNotificationToken(initialToken: tokenResult));
       try {
         await refreshDashboard(silent: true);
@@ -188,6 +198,8 @@ class AppController extends ChangeNotifier {
       final List<VehiclePosition> freshPositions = await _backendClient.fetchPositions();
       vehiclesCount = count;
       positions = freshPositions;
+      sessionRecoveryMode = false;
+      sessionNoticeMessage = null;
       if (moduleAccess == null) {
         try {
           moduleAccess = await _backendClient.fetchModuleAccess();
@@ -198,7 +210,9 @@ class AppController extends ChangeNotifier {
       errorMessage = null;
     } on BackendException catch (ex) {
       errorMessage = ex.message;
-      if (_isSessionLikeFailureMessage(ex.message)) {
+      if (_isRecoverableNodeSessionMessage(ex.message)) {
+        _markSessionUnavailable(message: ex.message);
+      } else if (_isDefinitiveSessionInvalidMessage(ex.message)) {
         await _markSessionLost();
       }
       rethrow;
@@ -617,24 +631,45 @@ class AppController extends ChangeNotifier {
     moduleAccess = null;
     vehiclesCount = 0;
     positions = const <VehiclePosition>[];
+    sessionRecoveryMode = false;
     errorMessage = null;
+    sessionNoticeMessage = null;
     loadingPushDebug = false;
     pushDebugInfo = null;
     _backendClient.clearSession();
     await _sessionStore.clear();
   }
 
-  bool _isSessionLikeFailureMessage(String message) {
+  bool _isRecoverableNodeSessionMessage(String message) {
     final String lower = message.toLowerCase();
-    return lower.contains('sesion') ||
-        lower.contains('sticky sessions') ||
+    return lower.contains('sticky sessions') ||
         lower.contains('sql incompleto') ||
         lower.contains('almacenamiento compartido de sesiones') ||
-        lower.contains('respuesta invalida del backend');
+        lower.contains('respuesta invalida del backend') ||
+        lower.contains('sesion no esta disponible en este nodo') ||
+        lower.contains('no puedo,error');
+  }
+
+  bool _isDefinitiveSessionInvalidMessage(String message) {
+    final String lower = message.toLowerCase();
+    return lower.contains('sesion invalida') ||
+        lower.contains('sesion expirada') ||
+        lower.contains('ingresa nuevamente') ||
+        lower.contains('debes iniciar sesion') ||
+        lower.contains('no se recibio cookie de sesion');
+  }
+
+  void _markSessionUnavailable({String? message}) {
+    sessionRecoveryMode = true;
+    sessionNoticeMessage = message ??
+        'Tu sesion sigue guardada en el dispositivo, pero este nodo no la reconocio. Reintenta para recuperar la conexion.';
+    errorMessage = sessionNoticeMessage;
+    notifyListeners();
   }
 
   Future<void> _markSessionLost({String? message}) async {
     await _clearLocalSession();
+    sessionRecoveryMode = false;
     sessionNoticeMessage =
         message ?? 'Tu sesion con el servidor se perdio. Ingresa nuevamente para continuar.';
     errorMessage = null;
@@ -695,7 +730,11 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> _handleBackendFailure(BackendException exception) async {
-    if (_isSessionLikeFailureMessage(exception.message)) {
+    if (_isRecoverableNodeSessionMessage(exception.message)) {
+      _markSessionUnavailable(message: exception.message);
+      return;
+    }
+    if (_isDefinitiveSessionInvalidMessage(exception.message)) {
       await _markSessionLost();
     }
   }
