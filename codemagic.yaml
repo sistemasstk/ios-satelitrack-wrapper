@@ -325,10 +325,13 @@ workflows:
           ls -lah build/ios/ipa || true
           echo "== Find IPA files =="
           find build -type f -name "*.ipa" -print || true
-          echo "== Inspect archive entitlements =="
-          ARCHIVE_PATH="$(find build -type d -name "Runner.xcarchive" | head -n 1)"
-          if [ -n "$ARCHIVE_PATH" ]; then
-            APP_PATH="$ARCHIVE_PATH/Products/Applications/Runner.app"
+          IPA_PATH="$(find build -type f -name "*.ipa" | head -n 1)"
+          if [ -n "$IPA_PATH" ]; then
+            echo "== Inspect exported IPA entitlements =="
+            rm -rf /tmp/ipa_inspect
+            mkdir -p /tmp/ipa_inspect
+            unzip -oq "$IPA_PATH" -d /tmp/ipa_inspect
+            APP_PATH="/tmp/ipa_inspect/Payload/Runner.app"
             if [ -f "$APP_PATH/embedded.mobileprovision" ]; then
               security cms -D -i "$APP_PATH/embedded.mobileprovision" > /tmp/embedded_profile.plist || true
               /usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /tmp/embedded_profile.plist || true
@@ -338,6 +341,30 @@ workflows:
             cat /tmp/app_entitlements.plist || true
             cat /tmp/codesign_entitlements.log || true
             if ! grep -q "aps-environment" /tmp/app_entitlements.plist 2>/dev/null; then
+              echo "WARN: Exported IPA no incluye aps-environment. Revisando archive para diagnostico..."
+            else
+              echo "OK: Exported IPA incluye aps-environment."
+              exit 0
+            fi
+          fi
+          echo "== Inspect archive entitlements =="
+          ARCHIVE_PATH="$(find build -type d -name "Runner.xcarchive" | head -n 1)"
+          if [ -n "$ARCHIVE_PATH" ]; then
+            APP_PATH="$ARCHIVE_PATH/Products/Applications/Runner.app"
+            if [ -f "$APP_PATH/embedded.mobileprovision" ]; then
+              security cms -D -i "$APP_PATH/embedded.mobileprovision" > /tmp/archive_embedded_profile.plist || true
+              /usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /tmp/archive_embedded_profile.plist || true
+              /usr/libexec/PlistBuddy -c "Print :Entitlements:aps-environment" /tmp/archive_embedded_profile.plist || true
+            fi
+            ARCHIVE_XCENT="$(find "$(dirname "$APP_PATH")/.." -path "*Runner.build/Release-iphoneos/Runner.build/Runner.app.xcent" | head -n 1)"
+            if [ -f "$ARCHIVE_XCENT" ]; then
+              echo "== Archive xcent =="
+              cat "$ARCHIVE_XCENT" || true
+            fi
+            codesign -d --entitlements :- "$APP_PATH" > /tmp/archive_app_entitlements.plist 2>/tmp/archive_codesign_entitlements.log || true
+            cat /tmp/archive_app_entitlements.plist || true
+            cat /tmp/archive_codesign_entitlements.log || true
+            if ! grep -q "aps-environment" /tmp/archive_app_entitlements.plist 2>/dev/null; then
               echo "ERROR: Signed Runner.app no incluye aps-environment."
               exit 70
             fi
@@ -695,10 +722,13 @@ workflows:
           ls -lah build/ios/ipa || true
           echo "== Find IPA files =="
           find build -type f -name "*.ipa" -print || true
-          echo "== Inspect archive entitlements =="
-          ARCHIVE_PATH="$(find build -type d -name "Runner.xcarchive" | head -n 1)"
-          if [ -n "$ARCHIVE_PATH" ]; then
-            APP_PATH="$ARCHIVE_PATH/Products/Applications/Runner.app"
+          IPA_PATH="$(find build -type f -name "*.ipa" | head -n 1)"
+          if [ -n "$IPA_PATH" ]; then
+            echo "== Inspect exported IPA entitlements =="
+            rm -rf /tmp/ipa_inspect
+            mkdir -p /tmp/ipa_inspect
+            unzip -oq "$IPA_PATH" -d /tmp/ipa_inspect
+            APP_PATH="/tmp/ipa_inspect/Payload/Runner.app"
             if [ -f "$APP_PATH/embedded.mobileprovision" ]; then
               security cms -D -i "$APP_PATH/embedded.mobileprovision" > /tmp/embedded_profile.plist || true
               /usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /tmp/embedded_profile.plist || true
@@ -708,6 +738,30 @@ workflows:
             cat /tmp/app_entitlements.plist || true
             cat /tmp/codesign_entitlements.log || true
             if ! grep -q "aps-environment" /tmp/app_entitlements.plist 2>/dev/null; then
+              echo "WARN: Exported IPA no incluye aps-environment. Revisando archive para diagnostico..."
+            else
+              echo "OK: Exported IPA incluye aps-environment."
+              exit 0
+            fi
+          fi
+          echo "== Inspect archive entitlements =="
+          ARCHIVE_PATH="$(find build -type d -name "Runner.xcarchive" | head -n 1)"
+          if [ -n "$ARCHIVE_PATH" ]; then
+            APP_PATH="$ARCHIVE_PATH/Products/Applications/Runner.app"
+            if [ -f "$APP_PATH/embedded.mobileprovision" ]; then
+              security cms -D -i "$APP_PATH/embedded.mobileprovision" > /tmp/archive_embedded_profile.plist || true
+              /usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /tmp/archive_embedded_profile.plist || true
+              /usr/libexec/PlistBuddy -c "Print :Entitlements:aps-environment" /tmp/archive_embedded_profile.plist || true
+            fi
+            ARCHIVE_XCENT="$(find "$(dirname "$APP_PATH")/.." -path "*Runner.build/Release-iphoneos/Runner.build/Runner.app.xcent" | head -n 1)"
+            if [ -f "$ARCHIVE_XCENT" ]; then
+              echo "== Archive xcent =="
+              cat "$ARCHIVE_XCENT" || true
+            fi
+            codesign -d --entitlements :- "$APP_PATH" > /tmp/archive_app_entitlements.plist 2>/tmp/archive_codesign_entitlements.log || true
+            cat /tmp/archive_app_entitlements.plist || true
+            cat /tmp/archive_codesign_entitlements.log || true
+            if ! grep -q "aps-environment" /tmp/archive_app_entitlements.plist 2>/dev/null; then
               echo "ERROR: Signed Runner.app no incluye aps-environment."
               exit 70
             fi
