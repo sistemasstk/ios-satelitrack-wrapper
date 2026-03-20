@@ -32,6 +32,8 @@ class AppController extends ChangeNotifier {
   List<VehiclePosition> positions = const <VehiclePosition>[];
   String? errorMessage;
   String? pushDebugInfo;
+  String? sessionNoticeMessage;
+  VoidCallback? onSessionInvalidated;
 
   bool get isAuthenticated => session != null;
   String? get notificationSetupWarning => _notificationService.diagnosticMessage;
@@ -40,6 +42,7 @@ class AppController extends ChangeNotifier {
     _ensureTokenRefreshListener();
     bootstrapping = true;
     errorMessage = null;
+    sessionNoticeMessage = null;
     notifyListeners();
 
     final UserSession? savedSession = await _sessionStore.load();
@@ -61,7 +64,7 @@ class AppController extends ChangeNotifier {
       }
       unawaited(_syncNotificationToken());
     } catch (_) {
-      await _clearLocalSession();
+      await _markSessionLost(message: 'Tu sesion anterior ya no esta disponible. Ingresa nuevamente.');
     }
 
     bootstrapping = false;
@@ -77,6 +80,7 @@ class AppController extends ChangeNotifier {
     loggingIn = true;
     errorMessage = null;
     pushDebugInfo = null;
+    sessionNoticeMessage = null;
     notifyListeners();
 
     try {
@@ -130,6 +134,7 @@ class AppController extends ChangeNotifier {
 
       session = newSession;
       await _sessionStore.save(newSession);
+      sessionNoticeMessage = null;
       unawaited(_syncNotificationToken(initialToken: tokenResult));
       try {
         await refreshDashboard(silent: true);
@@ -193,8 +198,8 @@ class AppController extends ChangeNotifier {
       errorMessage = null;
     } on BackendException catch (ex) {
       errorMessage = ex.message;
-      if (ex.message.toLowerCase().contains('sesion')) {
-        await _clearLocalSession();
+      if (_isSessionLikeFailureMessage(ex.message)) {
+        await _markSessionLost();
       }
       rethrow;
     } finally {
@@ -619,6 +624,24 @@ class AppController extends ChangeNotifier {
     await _sessionStore.clear();
   }
 
+  bool _isSessionLikeFailureMessage(String message) {
+    final String lower = message.toLowerCase();
+    return lower.contains('sesion') ||
+        lower.contains('sticky sessions') ||
+        lower.contains('sql incompleto') ||
+        lower.contains('almacenamiento compartido de sesiones') ||
+        lower.contains('respuesta invalida del backend');
+  }
+
+  Future<void> _markSessionLost({String? message}) async {
+    await _clearLocalSession();
+    sessionNoticeMessage =
+        message ?? 'Tu sesion con el servidor se perdio. Ingresa nuevamente para continuar.';
+    errorMessage = null;
+    onSessionInvalidated?.call();
+    notifyListeners();
+  }
+
   void _recordPushDebug({
     required String origin,
     required TokenResult tokenResult,
@@ -672,9 +695,8 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> _handleBackendFailure(BackendException exception) async {
-    if (exception.message.toLowerCase().contains('sesion')) {
-      await _clearLocalSession();
-      notifyListeners();
+    if (_isSessionLikeFailureMessage(exception.message)) {
+      await _markSessionLost();
     }
   }
 

@@ -96,17 +96,35 @@ workflows:
           fi
 
           echo "Push capabilities configuradas"
-      - name: Allow app.satelitrack.com.co over ATS
+      - name: Configure ATS for backend host
         script: |
           INFO_PLIST="ios/Runner/Info.plist"
           if [ -f "$INFO_PLIST" ]; then
+            EFFECTIVE_APP_BASE_URL="${APP_BASE_URL_OVERRIDE:-${APP_BASE_URL}}"
+            APP_BASE_URL_HOST="$(python3 - <<'PY'
+          from urllib.parse import urlparse
+          import os
+          print(urlparse(os.environ.get('EFFECTIVE_APP_BASE_URL', '')).hostname or '')
+          PY
+          )"
+            APP_BASE_URL_SCHEME="$(python3 - <<'PY'
+          from urllib.parse import urlparse
+          import os
+          print(urlparse(os.environ.get('EFFECTIVE_APP_BASE_URL', '')).scheme or '')
+          PY
+          )"
             /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" "$INFO_PLIST" 2>/dev/null || true
             /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoadsInWebContent bool true" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSAllowsArbitraryLoadsInWebContent true" "$INFO_PLIST"
-            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains dict" "$INFO_PLIST" 2>/dev/null || true
-            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co dict" "$INFO_PLIST" 2>/dev/null || true
-            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSIncludesSubdomains bool true" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSIncludesSubdomains true" "$INFO_PLIST"
-            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSTemporaryExceptionAllowsInsecureHTTPLoads bool true" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSTemporaryExceptionAllowsInsecureHTTPLoads true" "$INFO_PLIST"
-            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSTemporaryExceptionMinimumTLSVersion string TLSv1.0" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSTemporaryExceptionMinimumTLSVersion TLSv1.0" "$INFO_PLIST"
+            if [ "$APP_BASE_URL_SCHEME" = "http" ]; then
+              /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoads bool true" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSAllowsArbitraryLoads true" "$INFO_PLIST"
+              echo "ATS abierto temporalmente para HTTP en APP_BASE_URL=$EFFECTIVE_APP_BASE_URL"
+            elif [ -n "$APP_BASE_URL_HOST" ]; then
+              /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains dict" "$INFO_PLIST" 2>/dev/null || true
+              /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:${APP_BASE_URL_HOST} dict" "$INFO_PLIST" 2>/dev/null || true
+              /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:${APP_BASE_URL_HOST}:NSIncludesSubdomains bool true" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSExceptionDomains:${APP_BASE_URL_HOST}:NSIncludesSubdomains true" "$INFO_PLIST"
+              /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:${APP_BASE_URL_HOST}:NSTemporaryExceptionAllowsInsecureHTTPLoads bool true" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSExceptionDomains:${APP_BASE_URL_HOST}:NSTemporaryExceptionAllowsInsecureHTTPLoads true" "$INFO_PLIST"
+              /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:${APP_BASE_URL_HOST}:NSTemporaryExceptionMinimumTLSVersion string TLSv1.0" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSExceptionDomains:${APP_BASE_URL_HOST}:NSTemporaryExceptionMinimumTLSVersion TLSv1.0" "$INFO_PLIST"
+            fi
             /usr/libexec/PlistBuddy -c "Print :NSAppTransportSecurity" "$INFO_PLIST"
           else
             echo "WARN: Info.plist not found to set ATS exceptions"
@@ -221,15 +239,17 @@ workflows:
           fi
 
           SAFE_BUILD_NUMBER="${BUILD_NUMBER:-${PROJECT_BUILD_NUMBER:-1}}"
+          EFFECTIVE_APP_BASE_URL="${APP_BASE_URL_OVERRIDE:-${APP_BASE_URL}}"
           SAFE_BUILD_NUMBER="$(echo "$SAFE_BUILD_NUMBER" | tr -cd '0-9')"
           SAFE_BUILD_NUMBER="${SAFE_BUILD_NUMBER:0:18}"
           if [ -z "$SAFE_BUILD_NUMBER" ]; then SAFE_BUILD_NUMBER="1"; fi
           echo "Using iOS build-number: $SAFE_BUILD_NUMBER"
+          echo "Using APP_BASE_URL: $EFFECTIVE_APP_BASE_URL"
           flutter build ios --release --no-codesign \
             "--build-name=${APP_STORE_VERSION}" \
             "--build-number=${SAFE_BUILD_NUMBER}" \
             "--dart-define=APP_DISPLAY_NAME=${APP_DISPLAY_NAME}" \
-            "--dart-define=APP_BASE_URL=${APP_BASE_URL}" \
+            "--dart-define=APP_BASE_URL=${EFFECTIVE_APP_BASE_URL}" \
             "--dart-define=APP_VERSION=${APP_VERSION}"
           xcodebuild -workspace ios/Runner.xcworkspace \
             -scheme Runner \
@@ -561,17 +581,35 @@ workflows:
           fi
 
           echo "Push capabilities configuradas"
-      - name: Allow app.satelitrack.com.co over ATS
+      - name: Configure ATS for backend host
         script: |
           INFO_PLIST="ios/Runner/Info.plist"
           if [ -f "$INFO_PLIST" ]; then
+            EFFECTIVE_APP_BASE_URL="${APP_BASE_URL_OVERRIDE:-${APP_BASE_URL}}"
+            APP_BASE_URL_HOST="$(python3 - <<'PY'
+          from urllib.parse import urlparse
+          import os
+          print(urlparse(os.environ.get('EFFECTIVE_APP_BASE_URL', '')).hostname or '')
+          PY
+          )"
+            APP_BASE_URL_SCHEME="$(python3 - <<'PY'
+          from urllib.parse import urlparse
+          import os
+          print(urlparse(os.environ.get('EFFECTIVE_APP_BASE_URL', '')).scheme or '')
+          PY
+          )"
             /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" "$INFO_PLIST" 2>/dev/null || true
             /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoadsInWebContent bool true" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSAllowsArbitraryLoadsInWebContent true" "$INFO_PLIST"
-            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains dict" "$INFO_PLIST" 2>/dev/null || true
-            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co dict" "$INFO_PLIST" 2>/dev/null || true
-            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSIncludesSubdomains bool true" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSIncludesSubdomains true" "$INFO_PLIST"
-            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSTemporaryExceptionAllowsInsecureHTTPLoads bool true" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSTemporaryExceptionAllowsInsecureHTTPLoads true" "$INFO_PLIST"
-            /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSTemporaryExceptionMinimumTLSVersion string TLSv1.0" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSExceptionDomains:app.satelitrack.com.co:NSTemporaryExceptionMinimumTLSVersion TLSv1.0" "$INFO_PLIST"
+            if [ "$APP_BASE_URL_SCHEME" = "http" ]; then
+              /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoads bool true" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSAllowsArbitraryLoads true" "$INFO_PLIST"
+              echo "ATS abierto temporalmente para HTTP en APP_BASE_URL=$EFFECTIVE_APP_BASE_URL"
+            elif [ -n "$APP_BASE_URL_HOST" ]; then
+              /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains dict" "$INFO_PLIST" 2>/dev/null || true
+              /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:${APP_BASE_URL_HOST} dict" "$INFO_PLIST" 2>/dev/null || true
+              /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:${APP_BASE_URL_HOST}:NSIncludesSubdomains bool true" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSExceptionDomains:${APP_BASE_URL_HOST}:NSIncludesSubdomains true" "$INFO_PLIST"
+              /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:${APP_BASE_URL_HOST}:NSTemporaryExceptionAllowsInsecureHTTPLoads bool true" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSExceptionDomains:${APP_BASE_URL_HOST}:NSTemporaryExceptionAllowsInsecureHTTPLoads true" "$INFO_PLIST"
+              /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSExceptionDomains:${APP_BASE_URL_HOST}:NSTemporaryExceptionMinimumTLSVersion string TLSv1.0" "$INFO_PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSExceptionDomains:${APP_BASE_URL_HOST}:NSTemporaryExceptionMinimumTLSVersion TLSv1.0" "$INFO_PLIST"
+            fi
             /usr/libexec/PlistBuddy -c "Print :NSAppTransportSecurity" "$INFO_PLIST"
           else
             echo "WARN: Info.plist not found to set ATS exceptions"
@@ -686,15 +724,17 @@ workflows:
           fi
 
           SAFE_BUILD_NUMBER="${BUILD_NUMBER:-${PROJECT_BUILD_NUMBER:-1}}"
+          EFFECTIVE_APP_BASE_URL="${APP_BASE_URL_OVERRIDE:-${APP_BASE_URL}}"
           SAFE_BUILD_NUMBER="$(echo "$SAFE_BUILD_NUMBER" | tr -cd '0-9')"
           SAFE_BUILD_NUMBER="${SAFE_BUILD_NUMBER:0:18}"
           if [ -z "$SAFE_BUILD_NUMBER" ]; then SAFE_BUILD_NUMBER="1"; fi
           echo "Using iOS build-number: $SAFE_BUILD_NUMBER"
+          echo "Using APP_BASE_URL: $EFFECTIVE_APP_BASE_URL"
           flutter build ios --release --no-codesign \
             "--build-name=${APP_STORE_VERSION}" \
             "--build-number=${SAFE_BUILD_NUMBER}" \
             "--dart-define=APP_DISPLAY_NAME=${APP_DISPLAY_NAME}" \
-            "--dart-define=APP_BASE_URL=${APP_BASE_URL}" \
+            "--dart-define=APP_BASE_URL=${EFFECTIVE_APP_BASE_URL}" \
             "--dart-define=APP_VERSION=${APP_VERSION}"
           xcodebuild -workspace ios/Runner.xcworkspace \
             -scheme Runner \

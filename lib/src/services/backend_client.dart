@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -564,6 +565,7 @@ class BackendClient {
   Future<dynamic> _postFunctionRaw({
     required int idfn,
     Map<String, dynamic>? payload,
+    bool allowSessionRetry = true,
   }) async {
     if (!hasSession) {
       throw const BackendException('Sesion no disponible. Inicia sesion de nuevo.');
@@ -588,6 +590,14 @@ class BackendClient {
     final String rawBody = response.body.trim();
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final String backendError = _extractBackendError(rawBody);
+      if (allowSessionRetry && _shouldRetryRecoverableSessionIssue(backendError, rawBody)) {
+        await Future<void>.delayed(const Duration(milliseconds: 350));
+        return _postFunctionRaw(
+          idfn: idfn,
+          payload: payload,
+          allowSessionRetry: false,
+        );
+      }
       if (backendError.isNotEmpty) {
         throw BackendException(backendError);
       }
@@ -598,6 +608,14 @@ class BackendClient {
       return const <dynamic>[];
     }
     if (rawBody.startsWith('<')) {
+      if (allowSessionRetry) {
+        await Future<void>.delayed(const Duration(milliseconds: 350));
+        return _postFunctionRaw(
+          idfn: idfn,
+          payload: payload,
+          allowSessionRetry: false,
+        );
+      }
       throw const BackendException('Sesion expirada o respuesta invalida del backend.');
     }
 
@@ -605,6 +623,14 @@ class BackendClient {
       return jsonDecode(rawBody);
     } catch (_) {
       final String backendError = _extractBackendError(rawBody);
+      if (allowSessionRetry && _shouldRetryRecoverableSessionIssue(backendError, rawBody)) {
+        await Future<void>.delayed(const Duration(milliseconds: 350));
+        return _postFunctionRaw(
+          idfn: idfn,
+          payload: payload,
+          allowSessionRetry: false,
+        );
+      }
       if (backendError.isNotEmpty) {
         throw BackendException(backendError);
       }
@@ -615,6 +641,7 @@ class BackendClient {
   Future<Map<String, dynamic>> _postJsonApiEnvelope({
     required String path,
     required Map<String, dynamic> payload,
+    bool allowSessionRetry = true,
   }) async {
     if (!hasSession) {
       throw const BackendException('Sesion no disponible. Inicia sesion de nuevo.');
@@ -637,6 +664,14 @@ class BackendClient {
     final String rawBody = response.body.trim();
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final String backendError = _extractBackendError(rawBody);
+      if (allowSessionRetry && _shouldRetryRecoverableSessionIssue(backendError, rawBody)) {
+        await Future<void>.delayed(const Duration(milliseconds: 350));
+        return _postJsonApiEnvelope(
+          path: path,
+          payload: payload,
+          allowSessionRetry: false,
+        );
+      }
       if (backendError.isNotEmpty) {
         throw BackendException(backendError);
       }
@@ -647,6 +682,14 @@ class BackendClient {
       throw const BackendException('Respuesta vacia del backend.');
     }
     if (rawBody.startsWith('<')) {
+      if (allowSessionRetry) {
+        await Future<void>.delayed(const Duration(milliseconds: 350));
+        return _postJsonApiEnvelope(
+          path: path,
+          payload: payload,
+          allowSessionRetry: false,
+        );
+      }
       throw const BackendException('Sesion expirada o respuesta invalida del backend.');
     }
 
@@ -655,6 +698,14 @@ class BackendClient {
       decoded = jsonDecode(rawBody);
     } catch (_) {
       final String backendError = _extractBackendError(rawBody);
+      if (allowSessionRetry && _shouldRetryRecoverableSessionIssue(backendError, rawBody)) {
+        await Future<void>.delayed(const Duration(milliseconds: 350));
+        return _postJsonApiEnvelope(
+          path: path,
+          payload: payload,
+          allowSessionRetry: false,
+        );
+      }
       if (backendError.isNotEmpty) {
         throw BackendException(backendError);
       }
@@ -714,6 +765,17 @@ class BackendClient {
     final RegExpMatch? match = RegExp(r'PHPSESSID=[^;, ]+').firstMatch(setCookieHeader);
     return match?.group(0);
   }
+}
+
+bool _shouldRetryRecoverableSessionIssue(String backendError, String rawBody) {
+  final String source = (backendError.isNotEmpty ? backendError : rawBody).toLowerCase();
+  return source.contains('sesion no esta disponible en este nodo') ||
+      source.contains('sticky sessions') ||
+      source.contains('almacenamiento compartido de sesiones') ||
+      source.contains('sql incompleto') ||
+      source.contains('sesion expirada') ||
+      source.contains('respuesta invalida del backend') ||
+      source.contains('no puedo,error');
 }
 
 String _extractBackendError(String rawBody) {

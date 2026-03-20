@@ -63,6 +63,7 @@ class SatelitrackNativeApp extends StatefulWidget {
 }
 
 class _SatelitrackNativeAppState extends State<SatelitrackNativeApp> {
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   late final AppController _controller;
 
   @override
@@ -76,6 +77,9 @@ class _SatelitrackNativeAppState extends State<SatelitrackNativeApp> {
         bootstrapError: widget.firebaseBootstrapError,
       ),
     );
+    _controller.onSessionInvalidated = () {
+      _navigatorKey.currentState?.popUntil((Route<dynamic> route) => route.isFirst);
+    };
     unawaited(_controller.bootstrap());
   }
 
@@ -92,6 +96,7 @@ class _SatelitrackNativeAppState extends State<SatelitrackNativeApp> {
       builder: (BuildContext context, _) {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
+          navigatorKey: _navigatorKey,
           theme: ThemeData(
             useMaterial3: true,
             colorScheme: ColorScheme.fromSeed(seedColor: AppPalette.seed),
