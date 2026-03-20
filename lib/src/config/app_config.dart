@@ -11,7 +11,7 @@ class AppConfig {
 
   static const String appVersion = String.fromEnvironment(
     'APP_VERSION',
-    defaultValue: '2025',
+    defaultValue: '2026',
   );
 
   static const String tokenParamName = String.fromEnvironment(
