@@ -319,6 +319,74 @@ workflows:
                 -exportOptionsPlist /tmp/export_options.plist
             fi
           fi
+      - name: Repair IPA push entitlements if missing
+        script: |
+          IPA_PATH="$(find build -type f -name "*.ipa" | head -n 1)"
+          if [ -z "$IPA_PATH" ]; then
+            echo "WARN: IPA not found to repair push entitlements"
+            exit 0
+          fi
+
+          rm -rf /tmp/ipa_repair
+          mkdir -p /tmp/ipa_repair
+          unzip -oq "$IPA_PATH" -d /tmp/ipa_repair
+
+          APP_PATH="/tmp/ipa_repair/Payload/Runner.app"
+          if [ ! -d "$APP_PATH" ]; then
+            echo "WARN: Exported Runner.app not found inside IPA"
+            exit 0
+          fi
+
+          security cms -D -i "$APP_PATH/embedded.mobileprovision" > /tmp/exported_profile.plist 2>/dev/null || true
+          APS_ENV="$(/usr/libexec/PlistBuddy -c "Print :Entitlements:aps-environment" /tmp/exported_profile.plist 2>/dev/null || true)"
+          codesign -d --entitlements :- "$APP_PATH" > /tmp/exported_app_entitlements.plist 2>/tmp/exported_codesign_entitlements.log || true
+
+          if grep -q "aps-environment" /tmp/exported_app_entitlements.plist 2>/dev/null; then
+            echo "IPA already includes aps-environment."
+            exit 0
+          fi
+
+          if [ -z "$APS_ENV" ]; then
+            echo "WARN: Exported IPA profile lacks aps-environment; skipping repair."
+            exit 0
+          fi
+
+          IDENTITY_HASH="$(security find-identity -v -p codesigning | awk '/Apple Distribution:/{print $2; exit}')"
+          if [ -z "$IDENTITY_HASH" ]; then
+            echo "ERROR: Apple Distribution identity not found for IPA repair."
+            exit 70
+          fi
+
+          if ! grep -q "<plist" /tmp/exported_app_entitlements.plist 2>/dev/null; then
+            cat > /tmp/exported_app_entitlements.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+            <dict>
+            </dict>
+          </plist>
+          EOF
+          fi
+
+          /usr/libexec/PlistBuddy -c "Set :aps-environment ${APS_ENV}" /tmp/exported_app_entitlements.plist 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Add :aps-environment string ${APS_ENV}" /tmp/exported_app_entitlements.plist
+
+          echo "== Re-sign entitlements =="
+          cat /tmp/exported_app_entitlements.plist
+
+          /usr/bin/codesign --force --sign "$IDENTITY_HASH" \
+            --entitlements /tmp/exported_app_entitlements.plist \
+            --generate-entitlement-der \
+            "$APP_PATH"
+
+          TMP_IPA="/tmp/repacked_$(basename "$IPA_PATH")"
+          rm -f "$TMP_IPA"
+          (
+            cd /tmp/ipa_repair
+            zip -qry "$TMP_IPA" .
+          )
+          mv "$TMP_IPA" "$IPA_PATH"
+          echo "IPA repaired with aps-environment=${APS_ENV}"
       - name: Verify IPA output
         script: |
           echo "== List build/ios/ipa =="
@@ -716,6 +784,74 @@ workflows:
                 -exportOptionsPlist /tmp/export_options.plist
             fi
           fi
+      - name: Repair IPA push entitlements if missing
+        script: |
+          IPA_PATH="$(find build -type f -name "*.ipa" | head -n 1)"
+          if [ -z "$IPA_PATH" ]; then
+            echo "WARN: IPA not found to repair push entitlements"
+            exit 0
+          fi
+
+          rm -rf /tmp/ipa_repair
+          mkdir -p /tmp/ipa_repair
+          unzip -oq "$IPA_PATH" -d /tmp/ipa_repair
+
+          APP_PATH="/tmp/ipa_repair/Payload/Runner.app"
+          if [ ! -d "$APP_PATH" ]; then
+            echo "WARN: Exported Runner.app not found inside IPA"
+            exit 0
+          fi
+
+          security cms -D -i "$APP_PATH/embedded.mobileprovision" > /tmp/exported_profile.plist 2>/dev/null || true
+          APS_ENV="$(/usr/libexec/PlistBuddy -c "Print :Entitlements:aps-environment" /tmp/exported_profile.plist 2>/dev/null || true)"
+          codesign -d --entitlements :- "$APP_PATH" > /tmp/exported_app_entitlements.plist 2>/tmp/exported_codesign_entitlements.log || true
+
+          if grep -q "aps-environment" /tmp/exported_app_entitlements.plist 2>/dev/null; then
+            echo "IPA already includes aps-environment."
+            exit 0
+          fi
+
+          if [ -z "$APS_ENV" ]; then
+            echo "WARN: Exported IPA profile lacks aps-environment; skipping repair."
+            exit 0
+          fi
+
+          IDENTITY_HASH="$(security find-identity -v -p codesigning | awk '/Apple Distribution:/{print $2; exit}')"
+          if [ -z "$IDENTITY_HASH" ]; then
+            echo "ERROR: Apple Distribution identity not found for IPA repair."
+            exit 70
+          fi
+
+          if ! grep -q "<plist" /tmp/exported_app_entitlements.plist 2>/dev/null; then
+            cat > /tmp/exported_app_entitlements.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+            <dict>
+            </dict>
+          </plist>
+          EOF
+          fi
+
+          /usr/libexec/PlistBuddy -c "Set :aps-environment ${APS_ENV}" /tmp/exported_app_entitlements.plist 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Add :aps-environment string ${APS_ENV}" /tmp/exported_app_entitlements.plist
+
+          echo "== Re-sign entitlements =="
+          cat /tmp/exported_app_entitlements.plist
+
+          /usr/bin/codesign --force --sign "$IDENTITY_HASH" \
+            --entitlements /tmp/exported_app_entitlements.plist \
+            --generate-entitlement-der \
+            "$APP_PATH"
+
+          TMP_IPA="/tmp/repacked_$(basename "$IPA_PATH")"
+          rm -f "$TMP_IPA"
+          (
+            cd /tmp/ipa_repair
+            zip -qry "$TMP_IPA" .
+          )
+          mv "$TMP_IPA" "$IPA_PATH"
+          echo "IPA repaired with aps-environment=${APS_ENV}"
       - name: Verify IPA output
         script: |
           echo "== List build/ios/ipa =="
