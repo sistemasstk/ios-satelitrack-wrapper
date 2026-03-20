@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../app_controller.dart';
+import '../config/app_config.dart';
 import '../models/domain_models.dart';
 import '../theme/app_palette.dart';
 import 'vehicle_detail_page.dart';
@@ -377,6 +378,7 @@ class _MapPageState extends State<MapPage> {
                               child: _VehicleMarker(
                                 plate: item.plate,
                                 ignition: item.ignitionLabel,
+                                imageUrl: _buildVehicleIconUrl(item),
                                 selected: item.plate == selected,
                                 onTap: () => _openVehicleDetail(item),
                               ),
@@ -448,18 +450,40 @@ class _MapPageState extends State<MapPage> {
       return fallback;
     }
   }
+
+  String? _buildVehicleIconUrl(VehiclePosition item) {
+    final String imageName = item.imageName.trim();
+    if (imageName.isEmpty) {
+      return null;
+    }
+
+    final Uri base = Uri.parse(AppConfig.baseUrl);
+    final List<String> segments = <String>[
+      ...base.pathSegments.where((String segment) => segment.isNotEmpty),
+      'assets',
+      'img',
+      'moviles',
+      imageName,
+    ];
+
+    return base
+        .replace(pathSegments: segments)
+        .toString();
+  }
 }
 
 class _VehicleMarker extends StatelessWidget {
   const _VehicleMarker({
     required this.plate,
     required this.ignition,
+    required this.imageUrl,
     required this.selected,
     required this.onTap,
   });
 
   final String plate;
   final String ignition;
+  final String? imageUrl;
   final bool selected;
   final VoidCallback onTap;
 
@@ -488,9 +512,64 @@ class _VehicleMarker extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 3),
-          Icon(Icons.place, color: markerColor, size: 22),
+          _VehicleMarkerPin(
+            imageUrl: imageUrl,
+            markerColor: markerColor,
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _VehicleMarkerPin extends StatelessWidget {
+  const _VehicleMarkerPin({
+    required this.imageUrl,
+    required this.markerColor,
+  });
+
+  final String? imageUrl;
+  final Color markerColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? url = imageUrl;
+    return Stack(
+      alignment: Alignment.center,
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        Icon(Icons.place, color: markerColor, size: 26),
+        Positioned(
+          top: 2,
+          child: Container(
+            width: 22,
+            height: 22,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 1.2),
+              boxShadow: const <BoxShadow>[
+                BoxShadow(
+                  color: Color(0x22000000),
+                  blurRadius: 4,
+                  offset: Offset(0, 1),
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: url == null
+                  ? Icon(Icons.directions_car, size: 14, color: markerColor)
+                  : Image.network(
+                      url,
+                      fit: BoxFit.cover,
+                      filterQuality: FilterQuality.low,
+                      errorBuilder: (_, __, ___) =>
+                          Icon(Icons.directions_car, size: 14, color: markerColor),
+                    ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
