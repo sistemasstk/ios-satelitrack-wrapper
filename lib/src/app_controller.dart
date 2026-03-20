@@ -200,12 +200,10 @@ class AppController extends ChangeNotifier {
       positions = freshPositions;
       sessionRecoveryMode = false;
       sessionNoticeMessage = null;
-      if (moduleAccess == null) {
-        try {
-          moduleAccess = await _backendClient.fetchModuleAccess();
-        } catch (_) {
-          // Keep fallback visibility when module API cannot be reached.
-        }
+      try {
+        moduleAccess = await _backendClient.fetchModuleAccess();
+      } catch (_) {
+        // Keep the last known module visibility when the module API cannot be reached.
       }
       errorMessage = null;
     } on BackendException catch (ex) {
