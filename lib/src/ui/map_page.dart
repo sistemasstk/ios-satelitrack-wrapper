@@ -372,8 +372,8 @@ class _MapPageState extends State<MapPage> {
                           .map(
                             (VehiclePosition item) => Marker(
                               point: LatLng(item.latitude, item.longitude),
-                              width: 120,
-                              height: 46,
+                              width: item.plate == selected ? 118 : 52,
+                              height: item.plate == selected ? 76 : 52,
                               alignment: Alignment.topCenter,
                               child: _VehicleMarker(
                                 plate: item.plate,
@@ -495,26 +495,39 @@ class _VehicleMarker extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: selected ? AppPalette.markerSelected : Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppPalette.borderSoft),
-            ),
-            child: Text(
-              plate,
-              style: TextStyle(
-                color: selected ? Colors.white : const Color(0xff1e293b),
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
+          if (selected)
+            Container(
+              constraints: const BoxConstraints(maxWidth: 110),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: AppPalette.markerSelected, width: 1.4),
+                boxShadow: const <BoxShadow>[
+                  BoxShadow(
+                    color: Color(0x20000000),
+                    blurRadius: 10,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Text(
+                plate,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppPalette.markerSelected,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 3),
-          _VehicleMarkerPin(
+          if (selected) const SizedBox(height: 5),
+          _VehicleMarkerBadge(
             imageUrl: imageUrl,
             markerColor: markerColor,
+            selected: selected,
           ),
         ],
       ),
@@ -522,14 +535,16 @@ class _VehicleMarker extends StatelessWidget {
   }
 }
 
-class _VehicleMarkerPin extends StatelessWidget {
-  const _VehicleMarkerPin({
+class _VehicleMarkerBadge extends StatelessWidget {
+  const _VehicleMarkerBadge({
     required this.imageUrl,
     required this.markerColor,
+    required this.selected,
   });
 
   final String? imageUrl;
   final Color markerColor;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -538,34 +553,49 @@ class _VehicleMarkerPin extends StatelessWidget {
       alignment: Alignment.center,
       clipBehavior: Clip.none,
       children: <Widget>[
-        Icon(Icons.place, color: markerColor, size: 26),
-        Positioned(
-          top: 2,
-          child: Container(
-            width: 22,
-            height: 22,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 1.2),
-              boxShadow: const <BoxShadow>[
-                BoxShadow(
-                  color: Color(0x22000000),
-                  blurRadius: 4,
-                  offset: Offset(0, 1),
-                ),
-              ],
+        Container(
+          width: selected ? 38 : 34,
+          height: selected ? 38 : 34,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: selected ? AppPalette.markerSelected : Colors.white,
+              width: selected ? 2 : 1.4,
             ),
+            boxShadow: const <BoxShadow>[
+              BoxShadow(
+                color: Color(0x24000000),
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(4),
             child: ClipOval(
               child: url == null
-                  ? Icon(Icons.directions_car, size: 14, color: markerColor)
+                  ? Icon(Icons.directions_car, size: 18, color: markerColor)
                   : Image.network(
                       url,
                       fit: BoxFit.cover,
                       filterQuality: FilterQuality.low,
                       errorBuilder: (_, __, ___) =>
-                          Icon(Icons.directions_car, size: 14, color: markerColor),
+                          Icon(Icons.directions_car, size: 18, color: markerColor),
                     ),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: -2,
+          right: -2,
+          child: Container(
+            width: 13,
+            height: 13,
+            decoration: BoxDecoration(
+              color: markerColor,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
             ),
           ),
         ),
