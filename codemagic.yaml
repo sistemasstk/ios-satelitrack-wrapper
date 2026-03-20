@@ -186,7 +186,21 @@ workflows:
           fi
       - name: Build iOS signed IPA
         script: |
-          PROFILE_PATH="$(find ~/Library/MobileDevice/Provisioning\ Profiles -type f -name "*.mobileprovision" | head -n 1)"
+          find_matching_profile() {
+            for profile in ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision; do
+              [ -f "$profile" ] || continue
+              security cms -D -i "$profile" > /tmp/profile_for_archive.plist 2>/dev/null || continue
+              app_id="$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /tmp/profile_for_archive.plist 2>/dev/null || true)"
+              aps_env="$(/usr/libexec/PlistBuddy -c "Print :Entitlements:aps-environment" /tmp/profile_for_archive.plist 2>/dev/null || true)"
+              if [ "$app_id" = "${APPLE_TEAM_ID}.${IOS_BUNDLE_IDENTIFIER}" ] && [ -n "$aps_env" ]; then
+                echo "$profile"
+                return 0
+              fi
+            done
+            return 1
+          }
+
+          PROFILE_PATH="$(find_matching_profile)"
           if [ -z "$PROFILE_PATH" ]; then
             echo "ERROR: Provisioning profile for ${IOS_BUNDLE_IDENTIFIER} not found in runner."
             ls -lah ~/Library/MobileDevice/Provisioning\ Profiles || true
@@ -222,17 +236,27 @@ workflows:
             -configuration Release \
             -destination generic/platform=iOS \
             -archivePath build/ios/archive/Runner.xcarchive \
-            DEVELOPMENT_TEAM="${APPLE_TEAM_ID}" \
-            PRODUCT_BUNDLE_IDENTIFIER="${IOS_BUNDLE_IDENTIFIER}" \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_ENTITLEMENTS=Runner/Runner.entitlements \
             archive
       - name: Export IPA from archive if missing
         script: |
+          find_matching_profile() {
+            for profile in ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision; do
+              [ -f "$profile" ] || continue
+              security cms -D -i "$profile" > /tmp/profile.plist 2>/dev/null || continue
+              app_id="$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /tmp/profile.plist 2>/dev/null || true)"
+              aps_env="$(/usr/libexec/PlistBuddy -c "Print :Entitlements:aps-environment" /tmp/profile.plist 2>/dev/null || true)"
+              if [ "$app_id" = "${APPLE_TEAM_ID}.${IOS_BUNDLE_IDENTIFIER}" ] && [ -n "$aps_env" ]; then
+                echo "$profile"
+                return 0
+              fi
+            done
+            return 1
+          }
+
           if ! find build -type f -name "*.ipa" | grep -q .; then
             ARCHIVE_PATH="$(find build -type d -name "Runner.xcarchive" | head -n 1)"
             if [ -n "$ARCHIVE_PATH" ]; then
-              PROFILE_PATH="$(find ~/Library/MobileDevice/Provisioning\ Profiles -type f -name "*.mobileprovision" | head -n 1)"
+              PROFILE_PATH="$(find_matching_profile)"
               if [ -z "$PROFILE_PATH" ]; then
                 echo "ERROR: Provisioning profile for ${IOS_BUNDLE_IDENTIFIER} not found in runner."
                 ls -lah ~/Library/MobileDevice/Provisioning\ Profiles || true
@@ -266,6 +290,10 @@ workflows:
             <dict>
               <key>method</key>
               <string>app-store-connect</string>
+              <key>teamID</key>
+              <string>${APPLE_TEAM_ID}</string>
+              <key>signingStyle</key>
+              <string>automatic</string>
               <key>destination</key>
               <string>export</string>
               <key>stripSwiftSymbols</key>
@@ -521,7 +549,21 @@ workflows:
           fi
       - name: Build iOS IPA validation
         script: |
-          PROFILE_PATH="$(find ~/Library/MobileDevice/Provisioning\ Profiles -type f -name "*.mobileprovision" | head -n 1)"
+          find_matching_profile() {
+            for profile in ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision; do
+              [ -f "$profile" ] || continue
+              security cms -D -i "$profile" > /tmp/profile_for_archive.plist 2>/dev/null || continue
+              app_id="$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /tmp/profile_for_archive.plist 2>/dev/null || true)"
+              aps_env="$(/usr/libexec/PlistBuddy -c "Print :Entitlements:aps-environment" /tmp/profile_for_archive.plist 2>/dev/null || true)"
+              if [ "$app_id" = "${APPLE_TEAM_ID}.${IOS_BUNDLE_IDENTIFIER}" ] && [ -n "$aps_env" ]; then
+                echo "$profile"
+                return 0
+              fi
+            done
+            return 1
+          }
+
+          PROFILE_PATH="$(find_matching_profile)"
           if [ -z "$PROFILE_PATH" ]; then
             echo "ERROR: Provisioning profile for ${IOS_BUNDLE_IDENTIFIER} not found in runner."
             ls -lah ~/Library/MobileDevice/Provisioning\ Profiles || true
@@ -557,17 +599,27 @@ workflows:
             -configuration Release \
             -destination generic/platform=iOS \
             -archivePath build/ios/archive/Runner.xcarchive \
-            DEVELOPMENT_TEAM="${APPLE_TEAM_ID}" \
-            PRODUCT_BUNDLE_IDENTIFIER="${IOS_BUNDLE_IDENTIFIER}" \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_ENTITLEMENTS=Runner/Runner.entitlements \
             archive
       - name: Export IPA from archive if missing
         script: |
+          find_matching_profile() {
+            for profile in ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision; do
+              [ -f "$profile" ] || continue
+              security cms -D -i "$profile" > /tmp/profile.plist 2>/dev/null || continue
+              app_id="$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /tmp/profile.plist 2>/dev/null || true)"
+              aps_env="$(/usr/libexec/PlistBuddy -c "Print :Entitlements:aps-environment" /tmp/profile.plist 2>/dev/null || true)"
+              if [ "$app_id" = "${APPLE_TEAM_ID}.${IOS_BUNDLE_IDENTIFIER}" ] && [ -n "$aps_env" ]; then
+                echo "$profile"
+                return 0
+              fi
+            done
+            return 1
+          }
+
           if ! find build -type f -name "*.ipa" | grep -q .; then
             ARCHIVE_PATH="$(find build -type d -name "Runner.xcarchive" | head -n 1)"
             if [ -n "$ARCHIVE_PATH" ]; then
-              PROFILE_PATH="$(find ~/Library/MobileDevice/Provisioning\ Profiles -type f -name "*.mobileprovision" | head -n 1)"
+              PROFILE_PATH="$(find_matching_profile)"
               if [ -z "$PROFILE_PATH" ]; then
                 echo "ERROR: Provisioning profile for ${IOS_BUNDLE_IDENTIFIER} not found in runner."
                 ls -lah ~/Library/MobileDevice/Provisioning\ Profiles || true
@@ -601,6 +653,10 @@ workflows:
             <dict>
               <key>method</key>
               <string>ad-hoc</string>
+              <key>teamID</key>
+              <string>${APPLE_TEAM_ID}</string>
+              <key>signingStyle</key>
+              <string>automatic</string>
               <key>destination</key>
               <string>export</string>
               <key>stripSwiftSymbols</key>
